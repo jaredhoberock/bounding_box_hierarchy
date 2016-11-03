@@ -22,11 +22,9 @@ template<typename PrimitiveType,
     bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
       ::addNode(const NodeIndex parent)
 {
-  NodeIndex result = NodeIndex(mParentIndices.size());
+  NodeIndex result = nodes_.size();
 
-  mParentIndices.resize(mParentIndices.size() + 1);
-  mChildIndices.resize(mChildIndices.size() + 1);
-  mMinBoundHitIndex.resize(mMinBoundHitIndex.size() + 1);
+  nodes_.resize(nodes_.size() + 1);
   mMaxBoundMissIndex.resize(mMaxBoundMissIndex.size() + 1);
   setParentIndex(result, parent);
   setHitIndex(result, NULL_NODE);
@@ -43,9 +41,9 @@ template<typename PrimitiveType,
                   const Point &m,
                   const Point &M)
 {
-  mMinBoundHitIndex[node][0] = m[0];
-  mMinBoundHitIndex[node][1] = m[1];
-  mMinBoundHitIndex[node][2] = m[2];
+  nodes_[node].min_corner_and_hit_index_[0] = m[0];
+  nodes_[node].min_corner_and_hit_index_[1] = m[1];
+  nodes_[node].min_corner_and_hit_index_[2] = m[2];
 
   mMaxBoundMissIndex[node][0] = M[0];
   mMaxBoundMissIndex[node][1] = M[1];
@@ -60,7 +58,7 @@ template<typename PrimitiveType,
                     const NodeIndex left,
                     const NodeIndex right)
 {
-  mChildIndices[node] = gpcpu::size2(left,right);
+  nodes_[node].child_indices_ = gpcpu::size2(left,right);
 } // end bounding_volume_hierarchy::setChildren()
 
 template<typename PrimitiveType,
@@ -70,7 +68,7 @@ template<typename PrimitiveType,
       ::setHitIndex(const NodeIndex node,
                     const NodeIndex hit)
 {
-  mMinBoundHitIndex[node][3] = uintAsFloat(hit);
+  nodes_[node].min_corner_and_hit_index_[3] = uintAsFloat(hit);
 } // end bounding_volume_hierarchy::setHitIndex()
 
 template<typename PrimitiveType,
@@ -80,7 +78,7 @@ template<typename PrimitiveType,
     bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
       ::getHitIndex(const NodeIndex n) const
 {
-  return floatAsUint(mMinBoundHitIndex[n][3]);
+  return floatAsUint(nodes_[n].min_corner_and_hit_index_[3]);
 } // end NodeIndex::getMissIndex()
 
 template<typename PrimitiveType,
@@ -458,7 +456,7 @@ template<typename PrimitiveType,
     bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
       ::getParentIndex(const NodeIndex n) const
 {
-  return mParentIndices[n];
+  return nodes_[n].parent_index_;
 } // end NodeIndex::getParentIndex()
 
 template<typename PrimitiveType,
@@ -468,7 +466,7 @@ template<typename PrimitiveType,
     bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
       ::getLeftIndex(const NodeIndex n) const
 {
-  return mChildIndices[n][0];
+  return nodes_[n].child_indices_[0];
 } // end NodeIndex::getLeftIndex()
 
 template<typename PrimitiveType,
@@ -478,7 +476,7 @@ template<typename PrimitiveType,
     bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
       ::getRightIndex(const NodeIndex n) const
 {
-  return mChildIndices[n][1];
+  return nodes_[n].child_indices_[1];
 } // end NodeIndex::getRightIndex()
 
 template<typename PrimitiveType,
@@ -498,7 +496,7 @@ template<typename PrimitiveType,
     ::setParentIndex(const NodeIndex n,
                      const NodeIndex parent)
 {
-  mParentIndices[n] = parent;
+  nodes_[n].parent_index_ = parent;
 } // end NodeIndex::getParentIndex()
 
 template<typename PrimitiveType,
@@ -507,7 +505,7 @@ template<typename PrimitiveType,
   const PointType &bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
     ::getMinBounds(const NodeIndex n) const
 {
-  return *reinterpret_cast<const PointType*>(&mMinBoundHitIndex[n]);
+  return *reinterpret_cast<const PointType*>(&nodes_[n].min_corner_and_hit_index_);
 } // end bounding_volume_hierarchy::getMinBounds()
 
 template<typename PrimitiveType,
@@ -525,9 +523,7 @@ template<typename PrimitiveType,
   void bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
     ::clear(void)
 {
-  mParentIndices.clear();
-  mChildIndices.clear();
-  mMinBoundHitIndex.clear();
+  nodes_.clear();
   mMaxBoundMissIndex.clear();
 } // end bounding_volume_hierarchy::clear()
 
@@ -537,7 +533,7 @@ template<typename PrimitiveType,
   size_t bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
     ::getNumNodes(void) const
 {
-  return mMinBoundHitIndex.size();
+  return nodes_.size();
 } // end bounding_volume_hierarchy::getNumNodes()
 
 template<typename PrimitiveType,
