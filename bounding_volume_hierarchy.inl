@@ -23,10 +23,7 @@ template<typename PrimitiveType,
 {
   NodeIndex result = nodes_.size();
 
-  nodes_.resize(nodes_.size() + 1);
-  setParentIndex(result, parent);
-  setHitIndex(result, NULL_NODE);
-  setMissIndex(result, NULL_NODE);
+  nodes_.emplace_back(parent);
 
   return result;
 } // end bounding_volume_hierarchy::addNode()
