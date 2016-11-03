@@ -258,6 +258,8 @@ template<typename PrimitiveType,
                      primitives,
                      cachedBound);
 
+  assert(nodes_.size() == 2 * primitives.size() - 1);
+
   // for each node, compute the index of the
   // next node in a hit/miss ray traversal
   NodeIndex miss,hit;

@@ -225,10 +225,19 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
     struct node
     {
+      // XXX its not clear that these indices need to be stored because
+      //     it seems like they ought to be computable from a node's index
       NodeIndex parent_index_;
       gpcpu::size2 child_indices_;
       gpcpu::float4 min_corner_and_hit_index_;
       gpcpu::float4 max_corner_and_miss_index_;
+
+      node() {}
+
+      node(NodeIndex parent)
+        : parent_index_(parent),
+          child_indices_(NULL_NODE,NULL_NODE)
+      {}
     };
 
     std::vector<node> nodes_;

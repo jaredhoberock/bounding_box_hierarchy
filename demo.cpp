@@ -102,7 +102,7 @@ struct intersect_triangle
 
 std::vector<triangle> random_triangles_in_unit_cube(size_t n, int seed = 0)
 {
-  std::default_random_engine rng(seed);
+  std::mt19937 rng(seed);
   std::uniform_real_distribution<float> unit_interval(0,1);
 
   std::vector<triangle> result(n);
@@ -141,11 +141,10 @@ std::vector<std::pair<point,vector>> random_rays_in_unit_cube(size_t n, int seed
   return result;
 }
 
-
-int main()
+void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
 {
   // generate some random triangles
-  auto triangles = random_triangles_in_unit_cube(10000);
+  auto triangles = random_triangles_in_unit_cube(num_triangles, seed);
 
   // build bvhs
   BoundingVolumeHierarchy<triangle, point> old_bvh;
@@ -155,7 +154,7 @@ int main()
   new_bvh.build(triangles, bound_triangle);
 
   // generate some random rays
-  auto rays = random_rays_in_unit_cube(1000);
+  auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
 
   std::vector<int> old_intersections;
   for(int i = 0; i < rays.size(); ++i)
@@ -182,6 +181,23 @@ int main()
   }
 
   assert(new_intersections == old_intersections);
+}
+
+
+int main()
+{
+  for(size_t i = 0; i < 20; ++i)
+  {
+    std::mt19937 rng(i);
+    std::uniform_int_distribution<> dist(500, 1000);
+
+    int m = dist(rng);
+    int n = dist(rng);
+
+    std::cout << "testing " << m << " " << n << std::endl;
+
+    test(m, n, rng());
+  }
 
   std::cout << "OK" << std::endl;
 
