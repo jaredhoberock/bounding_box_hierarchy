@@ -223,15 +223,12 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      */
     NodeIndex computeRightBrotherIndex(const NodeIndex i) const;
 
-    // XXX these should probably vectors of the type of RealType
-    std::vector<gpcpu::float4> mMaxBoundMissIndex;
-
     struct node
     {
       NodeIndex parent_index_;
       gpcpu::size2 child_indices_;
       gpcpu::float4 min_corner_and_hit_index_;
-      //gpcpu::float4 max_corner_and_miss_index;
+      gpcpu::float4 max_corner_and_miss_index_;
     };
 
     std::vector<node> nodes_;

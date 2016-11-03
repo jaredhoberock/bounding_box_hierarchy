@@ -25,7 +25,6 @@ template<typename PrimitiveType,
   NodeIndex result = nodes_.size();
 
   nodes_.resize(nodes_.size() + 1);
-  mMaxBoundMissIndex.resize(mMaxBoundMissIndex.size() + 1);
   setParentIndex(result, parent);
   setHitIndex(result, NULL_NODE);
   setMissIndex(result, NULL_NODE);
@@ -45,9 +44,9 @@ template<typename PrimitiveType,
   nodes_[node].min_corner_and_hit_index_[1] = m[1];
   nodes_[node].min_corner_and_hit_index_[2] = m[2];
 
-  mMaxBoundMissIndex[node][0] = M[0];
-  mMaxBoundMissIndex[node][1] = M[1];
-  mMaxBoundMissIndex[node][2] = M[2];
+  nodes_[node].max_corner_and_miss_index_[0] = M[0];
+  nodes_[node].max_corner_and_miss_index_[1] = M[1];
+  nodes_[node].max_corner_and_miss_index_[2] = M[2];
 } // end bounding_volume_hierarchy::setBounds()
 
 template<typename PrimitiveType,
@@ -88,7 +87,7 @@ template<typename PrimitiveType,
       ::setMissIndex(const NodeIndex node,
                      const NodeIndex miss)
 {
-  mMaxBoundMissIndex[node][3] = uintAsFloat(miss);
+  nodes_[node].max_corner_and_miss_index_[3] = uintAsFloat(miss);
 } // end bounding_volume_hierarchy::setMissIndex()
 
 template<typename PrimitiveType,
@@ -486,7 +485,7 @@ template<typename PrimitiveType,
     bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
       ::getMissIndex(const NodeIndex n) const
 {
-  return floatAsUint(mMaxBoundMissIndex[n][3]);
+  return floatAsUint(nodes_[n].max_corner_and_miss_index_[3]);
 } // end NodeIndex::getMissIndex()
 
 template<typename PrimitiveType,
@@ -514,7 +513,7 @@ template<typename PrimitiveType,
   const PointType &bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
     ::getMaxBounds(const NodeIndex n) const
 {
-  return *reinterpret_cast<const PointType*>(&mMaxBoundMissIndex[n]);
+  return *reinterpret_cast<const PointType*>(&nodes_[n].max_corner_and_miss_index_);
 } // end bounding_volume_hierarchy::getMaxBounds()
 
 template<typename PrimitiveType,
@@ -524,7 +523,6 @@ template<typename PrimitiveType,
     ::clear(void)
 {
   nodes_.clear();
-  mMaxBoundMissIndex.clear();
 } // end bounding_volume_hierarchy::clear()
 
 template<typename PrimitiveType,
