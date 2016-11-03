@@ -229,8 +229,10 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       //     it seems like they ought to be computable from a node's index
       NodeIndex parent_index_;
       gpcpu::size2 child_indices_;
-      gpcpu::float4 min_corner_and_hit_index_;
-      gpcpu::float4 max_corner_and_miss_index_;
+      Point min_corner_;
+      Point max_corner_;
+      NodeIndex hit_index_;
+      NodeIndex miss_index_;
 
       node() {}
 

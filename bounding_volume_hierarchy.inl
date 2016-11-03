@@ -1,5 +1,4 @@
 #include "bounding_volume_hierarchy.hpp"
-#include <bittricks/bittricks.h>
 #include <iostream>
 #include <limits>
 #include <algorithm>
@@ -40,13 +39,8 @@ template<typename PrimitiveType,
                   const Point &m,
                   const Point &M)
 {
-  nodes_[node].min_corner_and_hit_index_[0] = m[0];
-  nodes_[node].min_corner_and_hit_index_[1] = m[1];
-  nodes_[node].min_corner_and_hit_index_[2] = m[2];
-
-  nodes_[node].max_corner_and_miss_index_[0] = M[0];
-  nodes_[node].max_corner_and_miss_index_[1] = M[1];
-  nodes_[node].max_corner_and_miss_index_[2] = M[2];
+  nodes_[node].min_corner_ = m;
+  nodes_[node].max_corner_ = M;
 } // end bounding_volume_hierarchy::setBounds()
 
 template<typename PrimitiveType,
@@ -67,7 +61,7 @@ template<typename PrimitiveType,
       ::setHitIndex(const NodeIndex node,
                     const NodeIndex hit)
 {
-  nodes_[node].min_corner_and_hit_index_[3] = uintAsFloat(hit);
+  nodes_[node].hit_index_ = hit;
 } // end bounding_volume_hierarchy::setHitIndex()
 
 template<typename PrimitiveType,
@@ -77,7 +71,7 @@ template<typename PrimitiveType,
     bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
       ::getHitIndex(const NodeIndex n) const
 {
-  return floatAsUint(nodes_[n].min_corner_and_hit_index_[3]);
+  return nodes_[n].hit_index_;
 } // end NodeIndex::getMissIndex()
 
 template<typename PrimitiveType,
@@ -87,7 +81,7 @@ template<typename PrimitiveType,
       ::setMissIndex(const NodeIndex node,
                      const NodeIndex miss)
 {
-  nodes_[node].max_corner_and_miss_index_[3] = uintAsFloat(miss);
+  nodes_[node].miss_index_ = miss;
 } // end bounding_volume_hierarchy::setMissIndex()
 
 template<typename PrimitiveType,
@@ -487,7 +481,7 @@ template<typename PrimitiveType,
     bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
       ::getMissIndex(const NodeIndex n) const
 {
-  return floatAsUint(nodes_[n].max_corner_and_miss_index_[3]);
+  return nodes_[n].miss_index_;
 } // end NodeIndex::getMissIndex()
 
 template<typename PrimitiveType,
@@ -506,7 +500,7 @@ template<typename PrimitiveType,
   const PointType &bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
     ::getMinBounds(const NodeIndex n) const
 {
-  return *reinterpret_cast<const PointType*>(&nodes_[n].min_corner_and_hit_index_);
+  return nodes_[n].min_corner_;
 } // end bounding_volume_hierarchy::getMinBounds()
 
 template<typename PrimitiveType,
@@ -515,7 +509,7 @@ template<typename PrimitiveType,
   const PointType &bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
     ::getMaxBounds(const NodeIndex n) const
 {
-  return *reinterpret_cast<const PointType*>(&nodes_[n].max_corner_and_miss_index_);
+  return nodes_[n].max_corner_;
 } // end bounding_volume_hierarchy::getMaxBounds()
 
 template<typename PrimitiveType,
