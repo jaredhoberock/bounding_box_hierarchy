@@ -28,12 +28,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
                              const Real &tMin, const Real &tMax);
 
   protected:
-    /*! This method adds a new Node to this hierarchy.
-     *  \param parent The parent of the Node to add.
-     *  \return The index of the node.
-     */
-    size_t addNode(const size_t parent);
-
     /*! The idea of this class is to wrap Bounder
      *  and accelerate build() by caching the results
      *  of Bounder.
@@ -139,10 +133,12 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
       node() {}
 
-      node(size_t parent)
+      node(size_t parent, const Point& min_corner, const Point& max_corner)
         : parent_index_(parent),
           left_child_index_(null_node),
-          right_child_index_(null_node)
+          right_child_index_(null_node),
+          min_corner_(min_corner),
+          max_corner_(max_corner)
       {}
 
       node(size_t parent, size_t primitive_index)

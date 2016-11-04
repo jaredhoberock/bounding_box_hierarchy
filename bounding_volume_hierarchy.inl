@@ -14,22 +14,6 @@ const float bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::EPS = 0
 template<typename PrimitiveType,
          typename PointType,
          typename RealType>
-size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::addNode(const size_t parent)
-{
-  size_t result = nodes_.size();
-
-  // ensure that we will not invalidate any iterators
-  assert(nodes_.capacity() >= result + 1);
-
-  nodes_.emplace_back(parent);
-
-  return result;
-}
-
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
   bool bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
     ::intersectBox(const Point &o, const Point &invDir,
                    const Point &minBounds, const Point &maxBounds,
@@ -230,9 +214,8 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
   findBounds(begin, end, primitives, bound, m, M);
 
   // create a new node
-  size_t index = addNode(parent);
-  nodes_[index].min_corner_ = m;
-  nodes_[index].max_corner_ = M;
+  size_t index = nodes_.size();
+  nodes_.emplace_back(parent, m, M);
   
   size_t axis = findPrincipalAxis(m, M);
 
