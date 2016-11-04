@@ -91,9 +91,7 @@ template<typename PrimitiveType,
     } // end if
     else
     {
-      // XXX we can potentially ignore the checks on tMax and tMin
-      //     here if we require the Intersector to do it
-      hit = intersect(o,d,currentNode,t) && t < tMax && t > tMin;
+      hit = intersect(o,d,nodes_[currentNode].primitive_index(),t) && t < tMax && t > tMin;
       result |= hit;
       if(hit)
         tMax = std::min(t, tMax);
@@ -233,9 +231,7 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
     size_t result = *begin;
 
     // set its relatives
-    nodes_[result].parent_index_ = parent;
-    nodes_[result].left_child_index_ = null_node;
-    nodes_[result].right_child_index_ = null_node;
+    nodes_[result] = node(parent, *begin);
 
     return result;
   } // end if

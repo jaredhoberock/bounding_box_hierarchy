@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <gpcpu/Vector.h>
+#include <cassert>
 
 template<typename PrimitiveType, typename PointType, typename RealType = float>
   class bounding_volume_hierarchy
@@ -144,9 +145,21 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
           right_child_index_(null_node)
       {}
 
+      node(size_t parent, size_t primitive_index)
+        : parent_index_(parent),
+          left_child_index_(null_node),
+          right_child_index_(primitive_index)
+      {}
+
       bool is_leaf() const
       {
         return left_child_index_ == null_node;
+      }
+
+      size_t primitive_index() const
+      {
+        assert(is_leaf());
+        return right_child_index_;
       }
     };
 
