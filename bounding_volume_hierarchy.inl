@@ -159,8 +159,7 @@ template<typename PrimitiveType,
          typename RealType>
   template<typename Bounder>
     void bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-      ::build(const std::vector<Primitive> &primitives,
-              Bounder &bound)
+      ::build(const std::vector<Primitive> &primitives, Bounder &bound)
 {
   // we will sort an array of indices
   std::vector<size_t> primIndices(primitives.size());
@@ -173,16 +172,6 @@ template<typename PrimitiveType,
 
   // reserve 2*n - 1 nodes to ensure that no iterators are invalidated during construction
   nodes_.reserve(2 * primitives.size() - 1);
-
-  // initialize
-  // Leaf nodes come at the beginning of the list of nodes
-  // Create as many as we have primitives
-  for(size_t i = 0; i != primitives.size(); ++i)
-  {
-    // we don't know the leaf node's parent at first,
-    // so set it to null_node for now
-    addNode(null_node);
-  } // end for i
 
   // create a CachedBounder
   CachedBounder<Bounder> cachedBound(bound,primitives);
@@ -227,13 +216,8 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
 {
   if(begin + 1 == end)
   {
-    // we've hit a leaf
-    size_t result = *begin;
-
-    // set its relatives
-    nodes_[result] = node(parent, *begin);
-
-    return result;
+    nodes_.emplace_back(parent, *begin);
+    return nodes_.size() - 1;
   } // end if
   else if(begin == end)
   {
