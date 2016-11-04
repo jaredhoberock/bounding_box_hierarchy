@@ -32,18 +32,6 @@ template<typename PrimitiveType,
          typename PointType,
          typename RealType>
   void bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-      ::setBounds(const NodeIndex node,
-                  const Point &m,
-                  const Point &M)
-{
-  nodes_[node].min_corner_ = m;
-  nodes_[node].max_corner_ = M;
-} // end bounding_volume_hierarchy::setBounds()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  void bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
       ::setHitIndex(const NodeIndex node,
                     const NodeIndex hit)
 {
@@ -129,8 +117,8 @@ template<typename PrimitiveType,
     if(currentNode >= mRootIndex)
     {
       hit = intersectBox(o, invDir,
-                         getMinBounds(currentNode),
-                         getMaxBounds(currentNode),
+                         nodes_[currentNode].min_corner_,
+                         nodes_[currentNode].max_corner_,
                          tMin, tMax);
     } // end if
     else
@@ -293,7 +281,8 @@ template<typename PrimitiveType,
 
   // create a new node
   NodeIndex index = addNode(parent);
-  setBounds(index, m, M);
+  nodes_[index].min_corner_ = m;
+  nodes_[index].max_corner_ = M;
   
   size_t axis = findPrincipalAxis(m, M);
 
@@ -436,24 +425,6 @@ template<typename PrimitiveType,
 {
   return nodes_[n].miss_index_;
 } // end NodeIndex::getMissIndex()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  const PointType &bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-    ::getMinBounds(const NodeIndex n) const
-{
-  return nodes_[n].min_corner_;
-} // end bounding_volume_hierarchy::getMinBounds()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  const PointType &bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-    ::getMaxBounds(const NodeIndex n) const
-{
-  return nodes_[n].max_corner_;
-} // end bounding_volume_hierarchy::getMaxBounds()
 
 template<typename PrimitiveType,
          typename PointType,

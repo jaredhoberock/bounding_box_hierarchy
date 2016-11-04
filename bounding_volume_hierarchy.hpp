@@ -40,15 +40,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      */
     NodeIndex addNode(const NodeIndex parent);
 
-    /*! This method sets the bounds of the given Node.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \param m The minimal corner of the Node.
-     *  \param M The maximal corner of the Node.
-     */
-    void setBounds(const NodeIndex node,
-                   const Point &m,
-                   const Point &M);
-
     /*! This method sets the hit pointer of the given Node.
      *  \param node The NodeIndex of the Node of interest.
      *  \param hit  The NodeIndex of the hit node.
@@ -74,18 +65,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      *  \return The NodeIndex of n's miss Node.
      */
     inline NodeIndex getMissIndex(const NodeIndex node) const;
-
-    /*! This method returns the minimal bounds of the given Node's bounding box.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \return The min corner of n's bounding box.
-     */
-    inline const Point &getMinBounds(const NodeIndex n) const;
-
-    /*! This method returns the maximal bounds of the given Node's bounding box.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \return The max corner of n's bounding box.
-     */
-    inline const Point &getMaxBounds(const NodeIndex n) const;
 
     /*! The idea of this class is to wrap Bounder
      *  and accelerate build() by caching the results
