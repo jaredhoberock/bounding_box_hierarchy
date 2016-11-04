@@ -180,6 +180,12 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
     }
   }
 
+  if(new_intersections != old_intersections)
+  {
+    std::cerr << "old_intersections.size(): " << old_intersections.size() << std::endl;
+    std::cerr << "new_intersections.size(): " << new_intersections.size() << std::endl;
+  }
+
   assert(new_intersections == old_intersections);
 }
 
