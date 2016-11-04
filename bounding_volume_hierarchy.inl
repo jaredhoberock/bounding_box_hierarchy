@@ -213,17 +213,12 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
 
   std::nth_element(begin, split, end, sorter);
 
-  size_t rightChild = build(miss_index, null_node, split, end, primitives, bound);
-  size_t leftChild =  build(rightChild, rightChild, begin, split, primitives, bound);
+  size_t right_child = build(miss_index, null_node, split, end, primitives, bound);
+  size_t left_child  = build(right_child, right_child, begin, split, primitives, bound);
 
   // create a new node
   size_t index = nodes_.size();
-  nodes_.emplace_back(m, M);
-
-  nodes_[index].left_child_index_  = leftChild;
-  nodes_[index].right_child_index_ = rightChild;
-  nodes_[index].miss_index_        = miss_index;
-  nodes_[index].hit_index_         = leftChild;
+  nodes_.emplace_back(left_child, right_child, left_child, miss_index, m, M);
 
   return index;
 } // end bounding_volume_hierarchy::build()

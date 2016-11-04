@@ -102,16 +102,21 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     {
       size_t left_child_index_;
       size_t right_child_index_;
-      Point min_corner_;
-      Point max_corner_;
       size_t hit_index_;
       size_t miss_index_;
+      Point min_corner_;
+      Point max_corner_;
 
-      node() {}
-
-      node(const Point& min_corner, const Point& max_corner)
-        : left_child_index_(null_node),
-          right_child_index_(null_node),
+      node(size_t left_child_index,
+           size_t right_child_index,
+           size_t hit_index,
+           size_t miss_index,
+           const Point& min_corner,
+           const Point& max_corner)
+        : left_child_index_(left_child_index),
+          right_child_index_(right_child_index),
+          hit_index_(hit_index),
+          miss_index_(miss_index),
           min_corner_(min_corner),
           max_corner_(max_corner)
       {}
