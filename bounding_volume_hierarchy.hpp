@@ -44,7 +44,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         }
         else
         {
-          hit = intersect(o,d,current_node->primitive_index(),t) && t < tMax && t > tMin;
+          hit = intersect(o,d,current_node - nodes_.data(),t) && t < tMax && t > tMin;
           result |= hit;
           if(hit)
             tMax = std::min(t, tMax);
