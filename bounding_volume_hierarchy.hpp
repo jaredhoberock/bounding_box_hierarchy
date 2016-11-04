@@ -49,15 +49,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
                    const Point &m,
                    const Point &M);
 
-    /*! This method sets the child pointers of the given Node.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \param left The NodeIndex of the left child.
-     *  \param right The NodeIndex of the right child.
-     */
-    void setChildren(const NodeIndex node,
-                     const NodeIndex left,
-                     const NodeIndex right);
-
     /*! This method sets the hit pointer of the given Node.
      *  \param node The NodeIndex of the Node of interest.
      *  \param hit  The NodeIndex of the hit node.
