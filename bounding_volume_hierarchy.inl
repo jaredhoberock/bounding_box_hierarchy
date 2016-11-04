@@ -2,9 +2,6 @@
 #include <limits>
 
 template<typename PrimitiveType, typename PointType, typename RealType>
-const size_t bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::null_node = std::numeric_limits<size_t>::max();
-
-template<typename PrimitiveType, typename PointType, typename RealType>
 const float bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::EPS = 0.00005f;
 
 
@@ -52,37 +49,36 @@ template<typename PrimitiveType,
   invDir[1] = Real(1.0) / d[1];
   invDir[2] = Real(1.0) / d[2];
 
-  size_t currentNode = root_node();
-  size_t hitIndex;
-  size_t missIndex;
+  const node* current_node = root_node();
   bool hit = false;
   bool result = false;
   float t = tMax;
-  while(currentNode != null_node)
+  while(current_node != nullptr)
   {
-    hitIndex = nodes_[currentNode].hit_index_;
-    missIndex = nodes_[currentNode].miss_index_;
+    const node* hit_node = current_node->hit_node_;
+    const node* miss_node = current_node->miss_node_;
 
-    if(!nodes_[currentNode].is_leaf())
+    if(!current_node->is_leaf())
     {
       hit = intersectBox(o, invDir,
-                         nodes_[currentNode].min_corner_,
-                         nodes_[currentNode].max_corner_,
+                         current_node->min_corner_,
+                         current_node->max_corner_,
                          tMin, tMax);
     } // end if
     else
     {
-      hit = intersect(o,d,nodes_[currentNode].primitive_index(),t) && t < tMax && t > tMin;
+      hit = intersect(o,d,current_node->primitive_index(),t) && t < tMax && t > tMin;
       result |= hit;
       if(hit)
         tMax = std::min(t, tMax);
     } // end else
 
-    currentNode = hit ? hitIndex : missIndex;
+    current_node = hit ? hit_node : miss_node;
   } // end while
 
   return result;
-} // end bounding_volume_hierarchy::intersect()
+}
+
 
 template<typename PrimitiveType,
          typename PointType,

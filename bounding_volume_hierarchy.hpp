@@ -98,51 +98,51 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       //     but a null left index indicates an interior node
       // XXX we could rearrange the tree such that the interior nodes occur first
       //     which would avoid checking the type of node
-      size_t left_child_index_;
-      size_t right_child_index_;
-      size_t hit_index_;
-      size_t miss_index_;
+      const node* left_child_;
+      const node* right_child_;
+      const node* hit_node_;
+      const node* miss_node_;
       Point min_corner_;
       Point max_corner_;
 
-      node(size_t left_child_index,
-           size_t right_child_index,
-           size_t hit_index,
-           size_t miss_index,
+      node(const node* left_child,
+           const node* right_child,
+           const node* hit_node,
+           const node* miss_node,
            const Point& min_corner,
            const Point& max_corner)
-        : left_child_index_(left_child_index),
-          right_child_index_(right_child_index),
-          hit_index_(hit_index),
-          miss_index_(miss_index),
+        : left_child_(left_child),
+          right_child_(right_child),
+          hit_node_(hit_node),
+          miss_node_(miss_node),
           min_corner_(min_corner),
           max_corner_(max_corner)
       {}
 
-      node(size_t hit_index, size_t miss_index, size_t primitive_index)
-        : left_child_index_(null_node),
-          right_child_index_(primitive_index),
-          hit_index_(hit_index),
-          miss_index_(miss_index)
+      node(const node* hit_node, const node* miss_node, size_t primitive_index)
+        : left_child_(nullptr),
+          right_child_(reinterpret_cast<node*>(primitive_index)),
+          hit_node_(hit_node),
+          miss_node_(miss_node)
       {}
 
       bool is_leaf() const
       {
-        return left_child_index_ == null_node;
+        return left_child_ == nullptr;
       }
 
       size_t primitive_index() const
       {
         assert(is_leaf());
-        return right_child_index_;
+        return reinterpret_cast<size_t>(right_child_);
       }
     };
 
 
     template<typename Bounder>
     static void make_tree_recursive(std::vector<node>& tree,
-                                    const size_t miss_index,
-                                    const size_t right_brother_index,
+                                    const node* miss_node,
+                                    const node* right_brother,
                                     std::vector<size_t>::iterator begin,
                                     std::vector<size_t>::iterator end,
                                     const std::vector<PrimitiveType> &primitives,
@@ -152,9 +152,9 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       {
         // a right leaf's hit index is always the miss index
         // a left leaf's hit index is always the right brother
-        size_t hit_index = right_brother_index == null_node ? miss_index : right_brother_index;
+        const node* hit_node = right_brother == nullptr ? miss_node : right_brother;
 
-        tree.emplace_back(hit_index, miss_index, *begin);
+        tree.emplace_back(hit_node, miss_node, *begin);
       } // end if
       else
       {
@@ -173,16 +173,15 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         std::nth_element(begin, split, end, sorter);
 
         // build the right subtree first
-        make_tree_recursive(tree, miss_index, null_node, split, end, primitives, bound);
-        size_t right_child = tree.size() - 1;
+        make_tree_recursive(tree, miss_node, nullptr, split, end, primitives, bound);
+        const node* right_child = &tree.back();
 
-        // we have to pass the index of the right child to the left subtree build
+        // we have to pass the right child to the left subtree build
         make_tree_recursive(tree, right_child, right_child, begin, split, primitives, bound);
-        size_t left_child = tree.size() - 1;
+        const node* left_child = &tree.back();
 
         // create a new node
-        size_t index = tree.size();
-        tree.emplace_back(left_child, right_child, left_child, miss_index, m, M);
+        tree.emplace_back(left_child, right_child, left_child, miss_node, m, M);
       }
     }
 
@@ -203,8 +202,8 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     
       // recurse
       make_tree_recursive(tree,
-                          null_node,
-                          null_node,
+                          nullptr,
+                          nullptr,
                           indices.begin(),
                           indices.end(),
                           primitives,
@@ -215,13 +214,12 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       return tree;
     }
 
-    size_t root_node() const
+    const node* root_node() const
     {
-      return nodes_.size() - 1;
+      return &nodes_.back();
     }
 
     std::vector<node> nodes_;
-    static const size_t null_node;
 };
 
 #include "bounding_volume_hierarchy.inl"
