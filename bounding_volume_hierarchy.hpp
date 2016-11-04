@@ -94,6 +94,10 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
     struct node
     {
+      // XXX only hit & miss indices are actually used during intersection
+      //     but a null left index indicates an interior node
+      // XXX we could rearrange the tree such that the interior nodes occur first
+      //     which would avoid checking the type of node
       size_t left_child_index_;
       size_t right_child_index_;
       size_t hit_index_;
