@@ -89,6 +89,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
     template<typename Bounder>
     size_t build(const size_t parent,
+                 const size_t miss_index,
                  std::vector<size_t>::iterator begin,
                  std::vector<size_t>::iterator end,
                  const std::vector<PrimitiveType> &primitives,
@@ -104,14 +105,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      *          NULL_NODE, otherwise.
      */
     size_t computeHitIndex(const size_t i) const;
-
-    /*! This method computes the index of the next node in a
-     *  depth first traversal of this tree, from node i.
-     *  \param i The Node of interest.
-     *  \return The index of the next Node from i, if it exists;
-     *          NULL_NODE, otherwise.
-     */
-    size_t computeMissIndex(const size_t i) const;
 
     /*! This method computes the index of a Node's brother to the right,
      *  if it exists.
@@ -141,10 +134,11 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
           max_corner_(max_corner)
       {}
 
-      node(size_t parent, size_t primitive_index)
+      node(size_t parent, size_t miss_index, size_t primitive_index)
         : parent_index_(parent),
           left_child_index_(null_node),
-          right_child_index_(primitive_index)
+          right_child_index_(primitive_index),
+          miss_index_(miss_index)
       {}
 
       bool is_leaf() const
