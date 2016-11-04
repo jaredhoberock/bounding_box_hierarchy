@@ -163,7 +163,6 @@ template<typename PrimitiveType,
   // recurse
   root_index_ = build(null_node,
                       null_node,
-                      null_node,
                       primIndices.begin(),
                       primIndices.end(),
                       primitives,
@@ -178,8 +177,7 @@ template<typename PrimitiveType,
          typename RealType>
 template<typename Bounder>
 size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-  ::build(const size_t parent,
-          const size_t miss_index,
+  ::build(const size_t miss_index,
           const size_t right_brother_index,
           std::vector<size_t>::iterator begin,
           std::vector<size_t>::iterator end,
@@ -192,7 +190,7 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
     // a left leaf's hit index is always the right brother
     size_t hit_index = right_brother_index == null_node ? miss_index : right_brother_index;
 
-    nodes_.emplace_back(parent, hit_index, miss_index, *begin);
+    nodes_.emplace_back(hit_index, miss_index, *begin);
     return nodes_.size() - 1;
   } // end if
   else if(begin == end)
@@ -207,7 +205,7 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
 
   // create a new node
   size_t index = nodes_.size();
-  nodes_.emplace_back(parent, m, M);
+  nodes_.emplace_back(m, M);
   
   size_t axis = findPrincipalAxis(m, M);
 
@@ -220,8 +218,8 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
 
   std::nth_element(begin, split, end, sorter);
 
-  size_t rightChild = build(index, miss_index, null_node, split, end, primitives, bound);
-  size_t leftChild =  build(index, rightChild, rightChild, begin, split, primitives, bound);
+  size_t rightChild = build(miss_index, null_node, split, end, primitives, bound);
+  size_t leftChild =  build(rightChild, rightChild, begin, split, primitives, bound);
 
   nodes_[index].left_child_index_  = leftChild;
   nodes_[index].right_child_index_ = rightChild;

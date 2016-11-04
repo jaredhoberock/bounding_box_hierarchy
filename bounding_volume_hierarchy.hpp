@@ -88,8 +88,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     }; // end PrimitiveSorter
 
     template<typename Bounder>
-    size_t build(const size_t parent,
-                 const size_t miss_index,
+    size_t build(const size_t miss_index,
                  const size_t right_brother_index,
                  std::vector<size_t>::iterator begin,
                  std::vector<size_t>::iterator end,
@@ -101,7 +100,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
     struct node
     {
-      size_t parent_index_;
       size_t left_child_index_;
       size_t right_child_index_;
       Point min_corner_;
@@ -111,17 +109,15 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
       node() {}
 
-      node(size_t parent, const Point& min_corner, const Point& max_corner)
-        : parent_index_(parent),
-          left_child_index_(null_node),
+      node(const Point& min_corner, const Point& max_corner)
+        : left_child_index_(null_node),
           right_child_index_(null_node),
           min_corner_(min_corner),
           max_corner_(max_corner)
       {}
 
-      node(size_t parent, size_t hit_index, size_t miss_index, size_t primitive_index)
-        : parent_index_(parent),
-          left_child_index_(null_node),
+      node(size_t hit_index, size_t miss_index, size_t primitive_index)
+        : left_child_index_(null_node),
           right_child_index_(primitive_index),
           hit_index_(hit_index),
           miss_index_(miss_index)
