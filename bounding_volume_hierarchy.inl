@@ -4,29 +4,25 @@
 #include <algorithm>
 #include <cassert>
 
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  const typename bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::NodeIndex bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::NULL_NODE = std::numeric_limits<NodeIndex>::max();
+template<typename PrimitiveType, typename PointType, typename RealType>
+const size_t bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::null_node = std::numeric_limits<size_t>::max();
+
+template<typename PrimitiveType, typename PointType, typename RealType>
+const float bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::EPS = 0.00005f;
+
 
 template<typename PrimitiveType,
          typename PointType,
          typename RealType>
-  const float bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::EPS = 0.00005f;
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  typename bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::NodeIndex
-    bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-      ::addNode(const NodeIndex parent)
+size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::addNode(const size_t parent)
 {
-  NodeIndex result = nodes_.size();
+  size_t result = nodes_.size();
 
   nodes_.emplace_back(parent);
 
   return result;
-} // end bounding_volume_hierarchy::addNode()
+}
+
 
 template<typename PrimitiveType,
          typename PointType,
@@ -55,7 +51,8 @@ template<typename PrimitiveType,
 
   bool hit = tNear <= tFar;
   return hit && tMax >= tNear && tMin <= tFar;
-} // end intersectBox()
+}
+
 
 template<typename PrimitiveType,
          typename PointType,
@@ -71,20 +68,20 @@ template<typename PrimitiveType,
   invDir[1] = Real(1.0) / d[1];
   invDir[2] = Real(1.0) / d[2];
 
-  NodeIndex currentNode = mRootIndex;
-  NodeIndex hitIndex;
-  NodeIndex missIndex;
+  size_t currentNode = root_index_;
+  size_t hitIndex;
+  size_t missIndex;
   bool hit = false;
   bool result = false;
   float t = tMax;
-  while(currentNode != NULL_NODE)
+  while(currentNode != null_node)
   {
     hitIndex = nodes_[currentNode].hit_index_;
     missIndex = nodes_[currentNode].miss_index_;
 
     // leaves (primitives) are listed before interior nodes
     // so bounding boxes occur after the root index
-    if(currentNode >= mRootIndex)
+    if(currentNode >= root_index_)
     {
       hit = intersectBox(o, invDir,
                          nodes_[currentNode].min_corner_,
@@ -181,28 +178,28 @@ template<typename PrimitiveType,
   for(size_t i = 0; i != primitives.size(); ++i)
   {
     // we don't know the leaf node's parent at first,
-    // so set it to NULL_NODE for now
-    addNode(NULL_NODE);
+    // so set it to null_node for now
+    addNode(null_node);
   } // end for i
 
   // create a CachedBounder
   CachedBounder<Bounder> cachedBound(bound,primitives);
 
   // recurse
-  mRootIndex = build(NULL_NODE,
-                     primIndices.begin(),
-                     primIndices.end(),
-                     primitives,
-                     cachedBound);
+  root_index_ = build(null_node,
+                      primIndices.begin(),
+                      primIndices.end(),
+                      primitives,
+                      cachedBound);
 
   assert(nodes_.size() == 2 * primitives.size() - 1);
 
   // for each node, compute the index of the
   // next node in a hit/miss ray traversal
-  NodeIndex miss,hit;
+  size_t miss,hit;
   for(int i = 0; i < nodes_.size(); ++i)
   {
-    if(nodes_[i].parent_index_ == NULL_NODE && i != mRootIndex)
+    if(nodes_[i].parent_index_ == null_node && i != root_index_)
     {
       assert(0);
     }
@@ -218,31 +215,30 @@ template<typename PrimitiveType,
 template<typename PrimitiveType,
          typename PointType,
          typename RealType>
-  template<typename Bounder>
-    typename bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::NodeIndex
-      bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-        ::build(const NodeIndex parent,
-                std::vector<size_t>::iterator begin,
-                std::vector<size_t>::iterator end,
-                const std::vector<PrimitiveType> &primitives,
-                Bounder &bound)
+template<typename Bounder>
+size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
+  ::build(const size_t parent,
+          std::vector<size_t>::iterator begin,
+          std::vector<size_t>::iterator end,
+          const std::vector<PrimitiveType> &primitives,
+          Bounder &bound)
 {
   if(begin + 1 == end)
   {
     // we've hit a leaf
-    NodeIndex result = *begin;
+    size_t result = *begin;
 
     // set its relatives
     nodes_[result].parent_index_ = parent;
-    nodes_[result].left_child_index_ = NULL_NODE;
-    nodes_[result].right_child_index_ = NULL_NODE;
+    nodes_[result].left_child_index_ = null_node;
+    nodes_[result].right_child_index_ = null_node;
 
     return result;
   } // end if
   else if(begin == end)
   {
     std::cerr << "bounding_volume_hierarchy::build(): empty base case." << std::endl;
-    return NULL_NODE;
+    return null_node;
   } // end else if
   
   // find the bounds of the Primitives
@@ -250,7 +246,7 @@ template<typename PrimitiveType,
   findBounds(begin, end, primitives, bound, m, M);
 
   // create a new node
-  NodeIndex index = addNode(parent);
+  size_t index = addNode(parent);
   nodes_[index].min_corner_ = m;
   nodes_[index].max_corner_ = M;
   
@@ -265,12 +261,12 @@ template<typename PrimitiveType,
 
   std::nth_element(begin, split, end, sorter);
 
-  NodeIndex leftChild = build(index, begin, split, primitives, bound);
-  NodeIndex rightChild = build(index, split, end, primitives, bound);
+  size_t leftChild = build(index, begin, split, primitives, bound);
+  size_t rightChild = build(index, split, end, primitives, bound);
 
   nodes_[index].left_child_index_  = leftChild;
   nodes_[index].right_child_index_ = rightChild;
-  nodes_[index].miss_index_ = NULL_NODE;
+  nodes_[index].miss_index_ = null_node;
 
   return index;
 } // end bounding_volume_hierarchy::build()
@@ -302,21 +298,19 @@ template<typename PrimitiveType,
 template<typename PrimitiveType,
          typename PointType,
          typename RealType>
-  typename bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::NodeIndex
-    bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-      ::computeHitIndex(const NodeIndex i) const
+size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::computeHitIndex(const size_t i) const
 {
   // case 1
   // return the left index if we are an interior node
-  NodeIndex result = nodes_[i].left_child_index_;
+  size_t result = nodes_[i].left_child_index_;
   
-  if(result == NULL_NODE)
+  if(result == null_node)
   {
     // case 1
     // the next node to visit after a hit is our right brother, 
     // if he exists
     result = computeRightBrotherIndex(i);
-    if(result == NULL_NODE)
+    if(result == null_node)
     {
       // if we have no right brother, return my parent's
       // miss index
@@ -330,24 +324,22 @@ template<typename PrimitiveType,
 template<typename PrimitiveType,
          typename PointType,
          typename RealType>
-  typename bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::NodeIndex
-    bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-      ::computeMissIndex(const NodeIndex i) const
+size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::computeMissIndex(const size_t i) const
 {
-  NodeIndex result = mRootIndex;
+  size_t result = root_index_;
   
   // case 1
   // there is no next node to visit after the root
-  if(i == mRootIndex)
+  if(i == root_index_)
   {
-    result = NULL_NODE;
+    result = null_node;
   } // end if
   else
   {
     // case 2
     // if i am my parent's left child, return my brother
     result = computeRightBrotherIndex(i);
-    if(result == NULL_NODE)
+    if(result == null_node)
     {
       // case 3
       // return my parent's miss index
@@ -361,12 +353,10 @@ template<typename PrimitiveType,
 template<typename PrimitiveType,
          typename PointType,
          typename RealType>
-  typename bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::NodeIndex
-    bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-      ::computeRightBrotherIndex(const NodeIndex i) const
+size_t bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::computeRightBrotherIndex(const size_t i) const
 {
-  NodeIndex result = NULL_NODE;
-  NodeIndex parent = nodes_[i].parent_index_;
+  size_t result = null_node;
+  size_t parent = nodes_[i].parent_index_;
 
   if(i == nodes_[parent].left_child_index_)
   {
@@ -375,16 +365,6 @@ template<typename PrimitiveType,
 
   return result;
 } // bounding_volume_hierarchy::computeRightBrotherIndex()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  typename bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::NodeIndex
-    bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-      ::getRootIndex(void) const
-{
-  return mRootIndex;
-} // end bounding_volume_hierarchy::getRootIndex()
 
 template<typename PrimitiveType,
          typename PointType,

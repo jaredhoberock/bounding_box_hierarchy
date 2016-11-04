@@ -11,8 +11,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     typedef PointType Point;
     typedef RealType Real;
 
-    typedef unsigned int NodeIndex;
-    static const NodeIndex NULL_NODE;
     static const float EPS;
 
     template<typename Bounder>
@@ -28,17 +26,12 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
                              const Point &minBounds, const Point &maxBounds, 
                              const Real &tMin, const Real &tMax);
 
-    /*! This method returns mRootIndex.
-     *  \return mRootIndex
-     */
-    inline NodeIndex getRootIndex(void) const;
-
   protected:
     /*! This method adds a new Node to this hierarchy.
      *  \param parent The parent of the Node to add.
      *  \return The index of the node.
      */
-    NodeIndex addNode(const NodeIndex parent);
+    size_t addNode(const size_t parent);
 
     /*! The idea of this class is to wrap Bounder
      *  and accelerate build() by caching the results
@@ -100,11 +93,11 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     }; // end PrimitiveSorter
 
     template<typename Bounder>
-      NodeIndex build(const NodeIndex parent,
-                      std::vector<size_t>::iterator begin,
-                      std::vector<size_t>::iterator end,
-                      const std::vector<PrimitiveType> &primitives,
-                      Bounder &bound);
+    size_t build(const size_t parent,
+                 std::vector<size_t>::iterator begin,
+                 std::vector<size_t>::iterator end,
+                 const std::vector<PrimitiveType> &primitives,
+                 Bounder &bound);
 
     static size_t findPrincipalAxis(const Point &min,
                                           const Point &max);
@@ -115,7 +108,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      *  \return The index of the next Node from i, if it exists;
      *          NULL_NODE, otherwise.
      */
-    NodeIndex computeHitIndex(const NodeIndex i) const;
+    size_t computeHitIndex(const size_t i) const;
 
     /*! This method computes the index of the next node in a
      *  depth first traversal of this tree, from node i.
@@ -123,7 +116,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      *  \return The index of the next Node from i, if it exists;
      *          NULL_NODE, otherwise.
      */
-    NodeIndex computeMissIndex(const NodeIndex i) const;
+    size_t computeMissIndex(const size_t i) const;
 
     /*! This method computes the index of a Node's brother to the right,
      *  if it exists.
@@ -131,30 +124,30 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      *  \return The index of Node i's brother to the right, if it exists;
      *          NULL_NODE, otherwise.
      */
-    NodeIndex computeRightBrotherIndex(const NodeIndex i) const;
+    size_t computeRightBrotherIndex(const size_t i) const;
 
     struct node
     {
-      NodeIndex parent_index_;
+      size_t parent_index_;
       size_t left_child_index_;
       size_t right_child_index_;
       Point min_corner_;
       Point max_corner_;
-      NodeIndex hit_index_;
-      NodeIndex miss_index_;
+      size_t hit_index_;
+      size_t miss_index_;
 
       node() {}
 
-      node(NodeIndex parent)
+      node(size_t parent)
         : parent_index_(parent),
-          left_child_index_(NULL_NODE),
-          right_child_index_(NULL_NODE)
+          left_child_index_(null_node),
+          right_child_index_(null_node)
       {}
     };
 
     std::vector<node> nodes_;
-
-    NodeIndex mRootIndex;
+    static const size_t null_node;
+    size_t root_index_;
 };
 
 #include "bounding_volume_hierarchy.inl"
