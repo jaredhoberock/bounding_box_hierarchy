@@ -219,8 +219,7 @@ template<typename PrimitiveType,
       ::build(const std::vector<Primitive> &primitives,
               Bounder &bound)
 {
-  // clear nodes first
-  clear();
+  nodes_.clear();
 
   // we will sort an array of indices
   std::vector<size_t> primIndices(primitives.size());
@@ -507,15 +506,6 @@ template<typename PrimitiveType,
 {
   return nodes_[n].max_corner_;
 } // end bounding_volume_hierarchy::getMaxBounds()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  void bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-    ::clear(void)
-{
-  nodes_.clear();
-} // end bounding_volume_hierarchy::clear()
 
 template<typename PrimitiveType,
          typename PointType,

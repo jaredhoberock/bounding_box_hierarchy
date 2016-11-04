@@ -33,12 +33,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      */
     inline NodeIndex getRootIndex(void) const;
 
-
   protected:
-    /*! This method clears this BoundingVolumeHierarchy of Nodes.
-     */
-    inline void clear(void);
-
     /*! This method adds a new Node to this hierarchy.
      *  \param parent The parent of the Node to add.
      *  \return The index of the node.
