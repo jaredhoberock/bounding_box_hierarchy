@@ -35,26 +35,23 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       float t = tMax;
       while(current_node != nullptr)
       {
-        const node* hit_node = current_node->hit_node_;
-        const node* miss_node = current_node->miss_node_;
-
         if(!current_node->is_leaf())
         {
           hit = intersectBox(o, invDir,
                              current_node->min_corner_,
                              current_node->max_corner_,
                              tMin, tMax);
-        } // end if
+        }
         else
         {
           hit = intersect(o,d,current_node->primitive_index(),t) && t < tMax && t > tMin;
           result |= hit;
           if(hit)
             tMax = std::min(t, tMax);
-        } // end else
+        }
 
-        current_node = hit ? hit_node : miss_node;
-      } // end while
+        current_node = hit ? current_node->hit_node_ : current_node->miss_node_;
+      }
 
       return result;
     }
