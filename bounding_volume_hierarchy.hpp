@@ -124,51 +124,44 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
     struct node
     {
-      // XXX only hit & miss indices are actually used during intersection
-      //     but a null left index indicates an interior node
-      // XXX we could rearrange the tree such that the interior nodes occur first
-      //     which would avoid checking the type of node
-
-      // XXX alternatively, we could just not have any leaves and the deepest interior nodes
-      //     could just point to the primitives directly -- the problem with that is that we
-      //     need to store hit & miss nodes for the leaves
-      const node* left_child_;
-      const node* right_child_;
       const node* hit_node_;
       const node* miss_node_;
       Point min_corner_;
       Point max_corner_;
 
-      node(const node* left_child,
-           const node* right_child,
-           const node* hit_node,
+      node(const node* hit_node,
            const node* miss_node,
            const Point& min_corner,
            const Point& max_corner)
-        : left_child_(left_child),
-          right_child_(right_child),
-          hit_node_(hit_node),
+        : hit_node_(hit_node),
           miss_node_(miss_node),
           min_corner_(min_corner),
           max_corner_(max_corner)
       {}
 
+      template<class To, class From>
+      static To coerce(const From& from)
+      {
+        union {From from; To to;} u;
+        u.from = from;
+        return u.to;
+      }
+
       node(const node* hit_node, const node* miss_node, size_t primitive_index)
-        : left_child_(nullptr),
-          right_child_(reinterpret_cast<node*>(primitive_index)),
-          hit_node_(hit_node),
-          miss_node_(miss_node)
+        : hit_node_(hit_node),
+          miss_node_(miss_node),
+          min_corner_(std::numeric_limits<float>::quiet_NaN(), coerce<float>(primitive_index), 0)
       {}
 
       bool is_leaf() const
       {
-        return left_child_ == nullptr;
+        return min_corner_[0] != min_corner_[0];
       }
 
       size_t primitive_index() const
       {
         assert(is_leaf());
-        return reinterpret_cast<size_t>(right_child_);
+        return coerce<size_t>(min_corner_[1]);
       }
     };
 
@@ -215,7 +208,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         const node* left_child = &tree.back();
 
         // create a new node
-        tree.emplace_back(left_child, right_child, left_child, miss_node, m, M);
+        tree.emplace_back(left_child, miss_node, m, M);
       }
     }
 
