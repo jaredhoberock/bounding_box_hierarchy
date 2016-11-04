@@ -254,21 +254,20 @@ template<typename PrimitiveType,
   // for each node, compute the index of the
   // next node in a hit/miss ray traversal
   NodeIndex miss,hit;
-  for(NodeIndex i = 0;
-      i != NodeIndex(getNumNodes());
-      ++i)
+  for(int i = 0; i < nodes_.size(); ++i)
   {
     if(getParentIndex(i) == NULL_NODE && i != mRootIndex)
     {
       assert(0);
-    } // end if
+    }
 
     hit = computeHitIndex(i);
     miss = computeMissIndex(i);
     setHitIndex(i, hit);
     setMissIndex(i, miss);
-  } // end for i
-} // end bounding_volume_hierarchy::build()
+  }
+}
+
 
 template<typename PrimitiveType,
          typename PointType,
@@ -517,15 +516,6 @@ template<typename PrimitiveType,
 {
   nodes_.clear();
 } // end bounding_volume_hierarchy::clear()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  size_t bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-    ::getNumNodes(void) const
-{
-  return nodes_.size();
-} // end bounding_volume_hierarchy::getNumNodes()
 
 template<typename PrimitiveType,
          typename PointType,

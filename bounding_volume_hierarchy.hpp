@@ -33,10 +33,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      */
     inline NodeIndex getRootIndex(void) const;
 
-    /*! This method returns the number of Nodes in this hierarchy.
-     *  \return The number of Nodes.
-     */
-    inline size_t getNumNodes(void) const;
 
   protected:
     /*! This method clears this BoundingVolumeHierarchy of Nodes.
