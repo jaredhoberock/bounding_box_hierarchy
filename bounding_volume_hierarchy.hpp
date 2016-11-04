@@ -161,8 +161,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
     struct node
     {
-      // XXX its not clear that these indices need to be stored because
-      //     it seems like they ought to be computable from a node's index
       NodeIndex parent_index_;
       size_t left_child_index_;
       size_t right_child_index_;
