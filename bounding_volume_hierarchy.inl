@@ -203,23 +203,22 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
   Point m, M;
   findBounds(begin, end, primitives, bound, m, M);
 
-  // create a new node
-  size_t index = nodes_.size();
-  nodes_.emplace_back(m, M);
-  
   size_t axis = findPrincipalAxis(m, M);
 
   // create an ordering
   PrimitiveSorter<Bounder> sorter(axis,primitives,bound);
   
   // sort the median
-  std::vector<size_t>::iterator split
-    = begin + (end - begin) / 2;
+  std::vector<size_t>::iterator split = begin + (end - begin) / 2;
 
   std::nth_element(begin, split, end, sorter);
 
   size_t rightChild = build(miss_index, null_node, split, end, primitives, bound);
   size_t leftChild =  build(rightChild, rightChild, begin, split, primitives, bound);
+
+  // create a new node
+  size_t index = nodes_.size();
+  nodes_.emplace_back(m, M);
 
   nodes_[index].left_child_index_  = leftChild;
   nodes_[index].right_child_index_ = rightChild;
