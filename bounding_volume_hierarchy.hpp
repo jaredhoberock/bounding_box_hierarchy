@@ -93,13 +93,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      */
     inline const Point &getMaxBounds(const NodeIndex n) const;
 
-    /*! This method sets the NodeIndex of the given Node's parent.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \param parent The NodeIndex of n's parent.
-     */
-    inline void setParentIndex(const NodeIndex node,
-                               const NodeIndex parent);
-
     /*! The idea of this class is to wrap Bounder
      *  and accelerate build() by caching the results
      *  of Bounder.
