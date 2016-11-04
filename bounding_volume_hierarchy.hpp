@@ -152,12 +152,12 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       node(const node* hit_node, const node* miss_node, size_t primitive_index)
         : hit_node_(hit_node),
           miss_node_(miss_node),
-          min_corner_(std::numeric_limits<float>::quiet_NaN(), coerce<float>(primitive_index), 0)
+          min_corner_(coerce<float>(primitive_index), 0, 0)
       {}
 
       size_t primitive_index() const
       {
-        return coerce<size_t>(min_corner_[1]);
+        return coerce<size_t>(min_corner_[0]);
       }
     };
 
@@ -181,7 +181,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         node* result = &tree[*begin];
         *result = node(hit_node, miss_node, *begin);
         return result;
-      } // end if
+      }
       else
       {
         // find the bounds of the primitives
@@ -242,11 +242,14 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       return tree;
     }
 
+    const node* leaves_end() const
+    {
+      return nodes_.data() + (nodes_.size() + 1) / 2;
+    }
+
     bool is_leaf(const node* n) const
     {
-      size_t index = n - nodes_.data();
-
-      return index < (nodes_.size() + 1) / 2;
+      return n < leaves_end();
     }
 
     const node* root_node() const
