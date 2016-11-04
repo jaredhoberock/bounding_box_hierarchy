@@ -88,12 +88,12 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     }; // end PrimitiveSorter
 
     template<typename Bounder>
-    size_t build(const size_t miss_index,
-                 const size_t right_brother_index,
-                 std::vector<size_t>::iterator begin,
-                 std::vector<size_t>::iterator end,
-                 const std::vector<PrimitiveType> &primitives,
-                 Bounder &bound);
+    void build(const size_t miss_index,
+               const size_t right_brother_index,
+               std::vector<size_t>::iterator begin,
+               std::vector<size_t>::iterator end,
+               const std::vector<PrimitiveType> &primitives,
+               Bounder &bound);
 
     static size_t findPrincipalAxis(const Point &min,
                                           const Point &max);
@@ -142,7 +142,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
     std::vector<node> nodes_;
     static const size_t null_node;
-    size_t root_index_;
 };
 
 #include "bounding_volume_hierarchy.inl"

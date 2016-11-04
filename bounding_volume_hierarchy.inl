@@ -56,7 +56,7 @@ template<typename PrimitiveType,
   invDir[1] = Real(1.0) / d[1];
   invDir[2] = Real(1.0) / d[2];
 
-  size_t currentNode = root_index_;
+  size_t currentNode = nodes_.size() - 1;
   size_t hitIndex;
   size_t missIndex;
   bool hit = false;
@@ -159,12 +159,12 @@ template<typename PrimitiveType,
   CachedBounder<Bounder> cachedBound(bound,primitives);
 
   // recurse
-  root_index_ = build(null_node,
-                      null_node,
-                      indices.begin(),
-                      indices.end(),
-                      primitives,
-                      cachedBound);
+  build(null_node,
+        null_node,
+        indices.begin(),
+        indices.end(),
+        primitives,
+        cachedBound);
 
   assert(nodes_.size() == 2 * primitives.size() - 1);
 }
@@ -174,7 +174,7 @@ template<typename PrimitiveType,
          typename PointType,
          typename RealType>
 template<typename Bounder>
-size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
+void bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
   ::build(const size_t miss_index,
           const size_t right_brother_index,
           std::vector<size_t>::iterator begin,
@@ -189,31 +189,35 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
     size_t hit_index = right_brother_index == null_node ? miss_index : right_brother_index;
 
     nodes_.emplace_back(hit_index, miss_index, *begin);
-    return nodes_.size() - 1;
   } // end if
-  
-  // find the bounds of the Primitives
-  Point m, M;
-  findBounds(begin, end, primitives, bound, m, M);
+  else
+  {
+    // find the bounds of the Primitives
+    Point m, M;
+    findBounds(begin, end, primitives, bound, m, M);
 
-  size_t axis = findPrincipalAxis(m, M);
+    size_t axis = findPrincipalAxis(m, M);
 
-  // create an ordering
-  PrimitiveSorter<Bounder> sorter(axis,primitives,bound);
-  
-  // sort the median
-  std::vector<size_t>::iterator split = begin + (end - begin) / 2;
+    // create an ordering
+    PrimitiveSorter<Bounder> sorter(axis,primitives,bound);
+    
+    // sort the median
+    std::vector<size_t>::iterator split = begin + (end - begin) / 2;
 
-  std::nth_element(begin, split, end, sorter);
+    std::nth_element(begin, split, end, sorter);
 
-  size_t right_child = build(miss_index, null_node, split, end, primitives, bound);
-  size_t left_child  = build(right_child, right_child, begin, split, primitives, bound);
+    // build the right subtree first
+    build(miss_index, null_node, split, end, primitives, bound);
+    size_t right_child = nodes_.size() - 1;
 
-  // create a new node
-  size_t index = nodes_.size();
-  nodes_.emplace_back(left_child, right_child, left_child, miss_index, m, M);
+    // we have to pass the index of the right child to the left subtree build
+    build(right_child, right_child, begin, split, primitives, bound);
+    size_t left_child = nodes_.size() - 1;
 
-  return index;
+    // create a new node
+    size_t index = nodes_.size();
+    nodes_.emplace_back(left_child, right_child, left_child, miss_index, m, M);
+  }
 }
 
 
