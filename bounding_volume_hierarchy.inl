@@ -2,6 +2,7 @@
 #include <iostream>
 #include <limits>
 #include <algorithm>
+#include <numeric>
 #include <cassert>
 
 template<typename PrimitiveType, typename PointType, typename RealType>
@@ -146,11 +147,8 @@ template<typename PrimitiveType,
       ::build(const std::vector<Primitive> &primitives, Bounder &bound)
 {
   // we will sort an array of indices
-  std::vector<size_t> primIndices(primitives.size());
-  for(size_t i = 0; i != primitives.size(); ++i)
-  {
-    primIndices[i] = i;
-  } // end for i
+  std::vector<size_t> indices(primitives.size());
+  std::iota(indices.begin(), indices.end(), 0);
 
   nodes_.clear();
 
@@ -163,8 +161,8 @@ template<typename PrimitiveType,
   // recurse
   root_index_ = build(null_node,
                       null_node,
-                      primIndices.begin(),
-                      primIndices.end(),
+                      indices.begin(),
+                      indices.end(),
                       primitives,
                       cachedBound);
 
@@ -193,11 +191,6 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
     nodes_.emplace_back(hit_index, miss_index, *begin);
     return nodes_.size() - 1;
   } // end if
-  else if(begin == end)
-  {
-    std::cerr << "bounding_volume_hierarchy::build(): empty base case." << std::endl;
-    return null_node;
-  } // end else if
   
   // find the bounds of the Primitives
   Point m, M;
@@ -221,7 +214,7 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
   nodes_.emplace_back(left_child, right_child, left_child, miss_index, m, M);
 
   return index;
-} // end bounding_volume_hierarchy::build()
+}
 
 
 template<typename PrimitiveType,
