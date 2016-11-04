@@ -18,6 +18,9 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::addNode(co
 {
   size_t result = nodes_.size();
 
+  // ensure that we will not invalidate any iterators
+  assert(nodes_.capacity() >= result + 1);
+
   nodes_.emplace_back(parent);
 
   return result;
@@ -163,14 +166,17 @@ template<typename PrimitiveType,
       ::build(const std::vector<Primitive> &primitives,
               Bounder &bound)
 {
-  nodes_.clear();
-
   // we will sort an array of indices
   std::vector<size_t> primIndices(primitives.size());
   for(size_t i = 0; i != primitives.size(); ++i)
   {
     primIndices[i] = i;
   } // end for i
+
+  nodes_.clear();
+
+  // reserve 2*n - 1 nodes to ensure that no iterators are invalidated during construction
+  nodes_.reserve(2 * primitives.size() - 1);
 
   // initialize
   // Leaf nodes come at the beginning of the list of nodes
