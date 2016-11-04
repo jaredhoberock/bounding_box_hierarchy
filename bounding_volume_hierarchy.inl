@@ -287,7 +287,7 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::computeHit
   }
 
   return result;
-} // end bounding_volume_hierarchy::computeMissIndex()
+}
 
 template<typename PrimitiveType,
          typename PointType,
