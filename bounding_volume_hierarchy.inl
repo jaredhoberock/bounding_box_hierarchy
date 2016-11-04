@@ -52,7 +52,7 @@ template<typename PrimitiveType,
   invDir[1] = Real(1.0) / d[1];
   invDir[2] = Real(1.0) / d[2];
 
-  size_t currentNode = nodes_.size() - 1;
+  size_t currentNode = root_node();
   size_t hitIndex;
   size_t missIndex;
   bool hit = false;

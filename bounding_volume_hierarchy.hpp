@@ -215,6 +215,11 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       return tree;
     }
 
+    size_t root_node() const
+    {
+      return nodes_.size() - 1;
+    }
+
     std::vector<node> nodes_;
     static const size_t null_node;
 };
