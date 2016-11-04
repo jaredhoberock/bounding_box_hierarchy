@@ -44,7 +44,10 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         }
         else
         {
-          hit = intersect(o,d,current_node - nodes_.data(),t) && t < tMax && t > tMin;
+          // the index of the primitive contained inside the leaf node is the same as the leaf node's index
+          size_t primitive_idx = current_node - nodes_.data();
+
+          hit = intersect(o, d, primitive_idx, t) && t < tMax && t > tMin;
           result |= hit;
           if(hit)
             tMax = std::min(t, tMax);
