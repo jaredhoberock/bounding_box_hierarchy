@@ -63,12 +63,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     void setMissIndex(const NodeIndex node,
                       const NodeIndex miss);
 
-    /*! This method returns the NodeIndex of the given Node's parent.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \return The NodeIndex of n's parent.
-     */
-    inline NodeIndex getParentIndex(const NodeIndex node) const;
-
     /*! This method returns the NodeIndex of the given Node's miss Node.
      *  \param n The NodeIndex of the Node of interest.
      *  \return The NodeIndex of n's hit Node.

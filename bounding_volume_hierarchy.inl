@@ -244,7 +244,7 @@ template<typename PrimitiveType,
   NodeIndex miss,hit;
   for(int i = 0; i < nodes_.size(); ++i)
   {
-    if(getParentIndex(i) == NULL_NODE && i != mRootIndex)
+    if(nodes_[i].parent_index_ == NULL_NODE && i != mRootIndex)
     {
       assert(0);
     }
@@ -361,7 +361,7 @@ template<typename PrimitiveType,
     {
       // if we have no right brother, return my parent's
       // miss index
-      result = computeMissIndex(getParentIndex(i));
+      result = computeMissIndex(nodes_[i].parent_index_);
     } // end if
   } // end if
 
@@ -392,7 +392,7 @@ template<typename PrimitiveType,
     {
       // case 3
       // return my parent's miss index
-      result = computeMissIndex(getParentIndex(i));
+      result = computeMissIndex(nodes_[i].parent_index_);
     } // end if
   } // end else
 
@@ -407,7 +407,7 @@ template<typename PrimitiveType,
       ::computeRightBrotherIndex(const NodeIndex i) const
 {
   NodeIndex result = NULL_NODE;
-  NodeIndex parent = getParentIndex(i);
+  NodeIndex parent = nodes_[i].parent_index_;
 
   if(i == nodes_[parent].left_child_index_)
   {
@@ -426,16 +426,6 @@ template<typename PrimitiveType,
 {
   return mRootIndex;
 } // end bounding_volume_hierarchy::getRootIndex()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  typename bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::NodeIndex
-    bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-      ::getParentIndex(const NodeIndex n) const
-{
-  return nodes_[n].parent_index_;
-} // end NodeIndex::getParentIndex()
 
 template<typename PrimitiveType,
          typename PointType,
