@@ -131,6 +131,10 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       //     but a null left index indicates an interior node
       // XXX we could rearrange the tree such that the interior nodes occur first
       //     which would avoid checking the type of node
+
+      // XXX alternatively, we could just not have any leaves and the deepest interior nodes
+      //     could just point to the primitives directly -- the problem with that is that we
+      //     need to store hit & miss nodes for the leaves
       const node* left_child_;
       const node* right_child_;
       const node* hit_node_;
