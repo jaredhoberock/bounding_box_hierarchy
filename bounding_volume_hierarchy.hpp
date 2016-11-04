@@ -90,6 +90,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     template<typename Bounder>
     size_t build(const size_t parent,
                  const size_t miss_index,
+                 const size_t right_brother_index,
                  std::vector<size_t>::iterator begin,
                  std::vector<size_t>::iterator end,
                  const std::vector<PrimitiveType> &primitives,
@@ -97,22 +98,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
     static size_t findPrincipalAxis(const Point &min,
                                           const Point &max);
-
-    /*! This method computes the index of the next node in a
-     *  depth first traversal of this tree, from node i.
-     *  \param i The Node of interest.
-     *  \return The index of the next Node from i, if it exists;
-     *          NULL_NODE, otherwise.
-     */
-    size_t computeHitIndex(const size_t i) const;
-
-    /*! This method computes the index of a Node's brother to the right,
-     *  if it exists.
-     *  \param i The index of the Node of interest.
-     *  \return The index of Node i's brother to the right, if it exists;
-     *          NULL_NODE, otherwise.
-     */
-    size_t computeRightBrotherIndex(const size_t i) const;
 
     struct node
     {
@@ -134,10 +119,11 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
           max_corner_(max_corner)
       {}
 
-      node(size_t parent, size_t miss_index, size_t primitive_index)
+      node(size_t parent, size_t hit_index, size_t miss_index, size_t primitive_index)
         : parent_index_(parent),
           left_child_index_(null_node),
           right_child_index_(primitive_index),
+          hit_index_(hit_index),
           miss_index_(miss_index)
       {}
 

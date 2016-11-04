@@ -163,24 +163,13 @@ template<typename PrimitiveType,
   // recurse
   root_index_ = build(null_node,
                       null_node,
+                      null_node,
                       primIndices.begin(),
                       primIndices.end(),
                       primitives,
                       cachedBound);
 
   assert(nodes_.size() == 2 * primitives.size() - 1);
-
-  // for each node, compute the index of the
-  // next node in a hit/miss ray traversal
-  for(int i = 0; i < nodes_.size(); ++i)
-  {
-    if(nodes_[i].parent_index_ == null_node && i != root_index_)
-    {
-      assert(0);
-    }
-
-    nodes_[i].hit_index_ = computeHitIndex(i);
-  }
 }
 
 
@@ -191,6 +180,7 @@ template<typename Bounder>
 size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
   ::build(const size_t parent,
           const size_t miss_index,
+          const size_t right_brother_index,
           std::vector<size_t>::iterator begin,
           std::vector<size_t>::iterator end,
           const std::vector<PrimitiveType> &primitives,
@@ -198,7 +188,11 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
 {
   if(begin + 1 == end)
   {
-    nodes_.emplace_back(parent, miss_index, *begin);
+    // a right leaf's hit index is always the miss index
+    // a left leaf's hit index is always the right brother
+    size_t hit_index = right_brother_index == null_node ? miss_index : right_brother_index;
+
+    nodes_.emplace_back(parent, hit_index, miss_index, *begin);
     return nodes_.size() - 1;
   } // end if
   else if(begin == end)
@@ -226,12 +220,13 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
 
   std::nth_element(begin, split, end, sorter);
 
-  size_t rightChild = build(index, miss_index, split, end, primitives, bound);
-  size_t leftChild =  build(index, rightChild, begin, split, primitives, bound);
+  size_t rightChild = build(index, miss_index, null_node, split, end, primitives, bound);
+  size_t leftChild =  build(index, rightChild, rightChild, begin, split, primitives, bound);
 
   nodes_[index].left_child_index_  = leftChild;
   nodes_[index].right_child_index_ = rightChild;
-  nodes_[index].miss_index_ = miss_index;
+  nodes_[index].miss_index_        = miss_index;
+  nodes_[index].hit_index_         = leftChild;
 
   return index;
 } // end bounding_volume_hierarchy::build()
@@ -260,51 +255,6 @@ template<typename PrimitiveType,
 
   return axis;
 } // end bounding_volume_hierarchy::findPrincipalAxis()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::computeHitIndex(const size_t i) const
-{
-  size_t result = 0;
-  
-  if(nodes_[i].is_leaf())
-  {
-    // case 1
-    // the next node to visit after a hit is our right brother, 
-    // if he exists
-    result = computeRightBrotherIndex(i);
-    if(result == null_node)
-    {
-      // if we have no right brother, return my parent's
-      // miss index
-      result = nodes_[nodes_[i].parent_index_].miss_index_;
-    } // end if
-  } // end if
-  else
-  {
-    // return the left child if we are an interior node
-    result = nodes_[i].left_child_index_;
-  }
-
-  return result;
-}
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-size_t bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::computeRightBrotherIndex(const size_t i) const
-{
-  size_t result = null_node;
-  size_t parent = nodes_[i].parent_index_;
-
-  if(i == nodes_[parent].left_child_index_)
-  {
-    result = nodes_[parent].right_child_index_;
-  } // end if
-
-  return result;
-} // bounding_volume_hierarchy::computeRightBrotherIndex()
 
 template<typename PrimitiveType,
          typename PointType,
