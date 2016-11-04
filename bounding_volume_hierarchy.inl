@@ -179,10 +179,8 @@ template<typename PrimitiveType,
       assert(0);
     }
 
-    hit = computeHitIndex(i);
-    miss = computeMissIndex(i);
-    nodes_[i].hit_index_ = hit;
-    nodes_[i].miss_index_ = miss;
+    nodes_[i].hit_index_ = computeHitIndex(i);
+    nodes_[i].miss_index_ = computeMissIndex(i);
   }
 }
 
