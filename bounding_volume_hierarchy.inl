@@ -31,36 +31,6 @@ template<typename PrimitiveType,
 template<typename PrimitiveType,
          typename PointType,
          typename RealType>
-  void bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-      ::setHitIndex(const NodeIndex node,
-                    const NodeIndex hit)
-{
-  nodes_[node].hit_index_ = hit;
-} // end bounding_volume_hierarchy::setHitIndex()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  typename bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::NodeIndex
-    bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-      ::getHitIndex(const NodeIndex n) const
-{
-  return nodes_[n].hit_index_;
-} // end NodeIndex::getMissIndex()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  void bounding_volume_hierarchy<PrimitiveType, PointType, RealType>
-      ::setMissIndex(const NodeIndex node,
-                     const NodeIndex miss)
-{
-  nodes_[node].miss_index_ = miss;
-} // end bounding_volume_hierarchy::setMissIndex()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
   bool bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
     ::intersectBox(const Point &o, const Point &invDir,
                    const Point &minBounds, const Point &maxBounds,
@@ -109,8 +79,8 @@ template<typename PrimitiveType,
   float t = tMax;
   while(currentNode != NULL_NODE)
   {
-    hitIndex = getHitIndex(currentNode);
-    missIndex = getMissIndex(currentNode);
+    hitIndex = nodes_[currentNode].hit_index_;
+    missIndex = nodes_[currentNode].miss_index_;
 
     // leaves (primitives) are listed before interior nodes
     // so bounding boxes occur after the root index
@@ -239,8 +209,8 @@ template<typename PrimitiveType,
 
     hit = computeHitIndex(i);
     miss = computeMissIndex(i);
-    setHitIndex(i, hit);
-    setMissIndex(i, miss);
+    nodes_[i].hit_index_ = hit;
+    nodes_[i].miss_index_ = miss;
   }
 }
 
@@ -300,7 +270,7 @@ template<typename PrimitiveType,
 
   nodes_[index].left_child_index_  = leftChild;
   nodes_[index].right_child_index_ = rightChild;
-  setMissIndex(index, NULL_NODE);
+  nodes_[index].miss_index_ = NULL_NODE;
 
   return index;
 } // end bounding_volume_hierarchy::build()
@@ -415,16 +385,6 @@ template<typename PrimitiveType,
 {
   return mRootIndex;
 } // end bounding_volume_hierarchy::getRootIndex()
-
-template<typename PrimitiveType,
-         typename PointType,
-         typename RealType>
-  typename bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::NodeIndex
-    bounding_volume_hierarchy<PrimitiveType,PointType,RealType>
-      ::getMissIndex(const NodeIndex n) const
-{
-  return nodes_[n].miss_index_;
-} // end NodeIndex::getMissIndex()
 
 template<typename PrimitiveType,
          typename PointType,

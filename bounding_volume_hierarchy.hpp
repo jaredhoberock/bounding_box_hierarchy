@@ -40,32 +40,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      */
     NodeIndex addNode(const NodeIndex parent);
 
-    /*! This method sets the hit pointer of the given Node.
-     *  \param node The NodeIndex of the Node of interest.
-     *  \param hit  The NodeIndex of the hit node.
-     */
-    void setHitIndex(const NodeIndex node,
-                     const NodeIndex hit);
-
-    /*! This method sets the miss pointer of the given Node.
-     *  \param node The NodeIndex of the Node of interest.
-     *  \param miss The NodeIndex of the miss Node.
-     */
-    void setMissIndex(const NodeIndex node,
-                      const NodeIndex miss);
-
-    /*! This method returns the NodeIndex of the given Node's miss Node.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \return The NodeIndex of n's hit Node.
-     */
-    inline NodeIndex getHitIndex(const NodeIndex node) const;
-
-    /*! This method returns the NodeIndex of the given Node's miss Node.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \return The NodeIndex of n's miss Node.
-     */
-    inline NodeIndex getMissIndex(const NodeIndex node) const;
-
     /*! The idea of this class is to wrap Bounder
      *  and accelerate build() by caching the results
      *  of Bounder.
