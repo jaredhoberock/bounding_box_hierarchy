@@ -21,10 +21,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       : nodes_(make_tree(primitives, bound))
     {}
 
-    template<typename Bounder>
-      void build(const std::vector<Primitive> &primitives,
-                 Bounder &bound);
-
     template<typename Intersector>
       bool intersect(const Point &o, const Point &d,
                      Real tMin, Real tMax,
@@ -93,14 +89,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       const std::vector<PrimitiveType> &mPrimitives;
       Bounder &mBound;
     }; // end PrimitiveSorter
-
-    template<typename Bounder>
-    void build(const size_t miss_index,
-               const size_t right_brother_index,
-               std::vector<size_t>::iterator begin,
-               std::vector<size_t>::iterator end,
-               const std::vector<PrimitiveType> &primitives,
-               Bounder &bound);
 
     static size_t findPrincipalAxis(const Point &min, const Point &max);
 
