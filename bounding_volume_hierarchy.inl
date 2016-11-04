@@ -1,9 +1,5 @@
 #include "bounding_volume_hierarchy.hpp"
-#include <iostream>
 #include <limits>
-#include <algorithm>
-#include <numeric>
-#include <cassert>
 
 template<typename PrimitiveType, typename PointType, typename RealType>
 const size_t bounding_volume_hierarchy<PrimitiveType,PointType,RealType>::null_node = std::numeric_limits<size_t>::max();

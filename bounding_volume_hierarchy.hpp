@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <gpcpu/Vector.h>
+#include <algorithm>
+#include <numeric>
 #include <cassert>
 
 template<typename PrimitiveType, typename PointType, typename RealType = float>
@@ -13,6 +15,11 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     typedef RealType Real;
 
     static const float EPS;
+
+    template<class Bounder>
+    bounding_volume_hierarchy(const std::vector<Primitive>& primitives, Bounder& bound)
+      : nodes_(make_tree(primitives, bound))
+    {}
 
     template<typename Bounder>
       void build(const std::vector<Primitive> &primitives,
@@ -95,8 +102,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
                const std::vector<PrimitiveType> &primitives,
                Bounder &bound);
 
-    static size_t findPrincipalAxis(const Point &min,
-                                          const Point &max);
+    static size_t findPrincipalAxis(const Point &min, const Point &max);
 
     struct node
     {
@@ -139,6 +145,83 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         return right_child_index_;
       }
     };
+
+
+    template<typename Bounder>
+    static void make_tree_recursive(std::vector<node>& tree,
+                                    const size_t miss_index,
+                                    const size_t right_brother_index,
+                                    std::vector<size_t>::iterator begin,
+                                    std::vector<size_t>::iterator end,
+                                    const std::vector<PrimitiveType> &primitives,
+                                    Bounder &bound)
+    {
+      if(begin + 1 == end)
+      {
+        // a right leaf's hit index is always the miss index
+        // a left leaf's hit index is always the right brother
+        size_t hit_index = right_brother_index == null_node ? miss_index : right_brother_index;
+
+        tree.emplace_back(hit_index, miss_index, *begin);
+      } // end if
+      else
+      {
+        // find the bounds of the primitives
+        Point m, M;
+        findBounds(begin, end, primitives, bound, m, M);
+
+        size_t axis = findPrincipalAxis(m, M);
+
+        // create an ordering
+        PrimitiveSorter<Bounder> sorter(axis,primitives,bound);
+        
+        // sort the median
+        std::vector<size_t>::iterator split = begin + (end - begin) / 2;
+
+        std::nth_element(begin, split, end, sorter);
+
+        // build the right subtree first
+        make_tree_recursive(tree, miss_index, null_node, split, end, primitives, bound);
+        size_t right_child = tree.size() - 1;
+
+        // we have to pass the index of the right child to the left subtree build
+        make_tree_recursive(tree, right_child, right_child, begin, split, primitives, bound);
+        size_t left_child = tree.size() - 1;
+
+        // create a new node
+        size_t index = tree.size();
+        tree.emplace_back(left_child, right_child, left_child, miss_index, m, M);
+      }
+    }
+
+
+    template<typename Bounder>
+    static std::vector<node> make_tree(const std::vector<Primitive> &primitives, Bounder &bound)
+    {
+      // we will sort an array of indices
+      std::vector<size_t> indices(primitives.size());
+      std::iota(indices.begin(), indices.end(), 0);
+    
+      // reserve 2*n - 1 nodes to ensure that no iterators are invalidated during construction
+      std::vector<node> tree;
+      tree.reserve(2 * primitives.size() - 1);
+    
+      // create a CachedBounder
+      CachedBounder<Bounder> cachedBound(bound,primitives);
+    
+      // recurse
+      make_tree_recursive(tree,
+                          null_node,
+                          null_node,
+                          indices.begin(),
+                          indices.end(),
+                          primitives,
+                          cachedBound);
+    
+      assert(tree.size() == 2 * primitives.size() - 1);
+
+      return tree;
+    }
 
     std::vector<node> nodes_;
     static const size_t null_node;
