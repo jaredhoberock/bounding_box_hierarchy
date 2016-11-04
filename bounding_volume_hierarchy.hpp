@@ -22,9 +22,42 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
     {}
 
     template<typename Intersector>
-      bool intersect(const Point &o, const Point &d,
-                     Real tMin, Real tMax,
-                     Intersector &intersect) const;
+    bool intersect(const Point &o, const Point &d, Real tMin, Real tMax, Intersector &intersect) const
+    {
+      Point invDir;
+      invDir[0] = Real(1.0) / d[0];
+      invDir[1] = Real(1.0) / d[1];
+      invDir[2] = Real(1.0) / d[2];
+
+      const node* current_node = root_node();
+      bool hit = false;
+      bool result = false;
+      float t = tMax;
+      while(current_node != nullptr)
+      {
+        const node* hit_node = current_node->hit_node_;
+        const node* miss_node = current_node->miss_node_;
+
+        if(!current_node->is_leaf())
+        {
+          hit = intersectBox(o, invDir,
+                             current_node->min_corner_,
+                             current_node->max_corner_,
+                             tMin, tMax);
+        } // end if
+        else
+        {
+          hit = intersect(o,d,current_node->primitive_index(),t) && t < tMax && t > tMin;
+          result |= hit;
+          if(hit)
+            tMax = std::min(t, tMax);
+        } // end else
+
+        current_node = hit ? hit_node : miss_node;
+      } // end while
+
+      return result;
+    }
 
     static bool intersectBox(const Point &o, const Point &invDir,
                              const Point &minBounds, const Point &maxBounds, 
