@@ -78,18 +78,6 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
      */
     inline NodeIndex getParentIndex(const NodeIndex node) const;
 
-    /*! This method returns the NodeIndex of the given Node's left child.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \return The NodeIndex of n's left child.
-     */
-    inline NodeIndex getLeftIndex(const NodeIndex node) const;
-
-    /*! This method returns the NodeIndex of the given Node's right child.
-     *  \param n The NodeIndex of the Node of interest.
-     *  \return The NodeIndex of n's right child.
-     */
-    inline NodeIndex getRightIndex(const NodeIndex node) const;
-
     /*! This method returns the NodeIndex of the given Node's miss Node.
      *  \param n The NodeIndex of the Node of interest.
      *  \return The NodeIndex of n's hit Node.
@@ -219,7 +207,8 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       // XXX its not clear that these indices need to be stored because
       //     it seems like they ought to be computable from a node's index
       NodeIndex parent_index_;
-      gpcpu::size2 child_indices_;
+      size_t left_child_index_;
+      size_t right_child_index_;
       Point min_corner_;
       Point max_corner_;
       NodeIndex hit_index_;
@@ -229,7 +218,8 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
 
       node(NodeIndex parent)
         : parent_index_(parent),
-          child_indices_(NULL_NODE,NULL_NODE)
+          left_child_index_(NULL_NODE),
+          right_child_index_(NULL_NODE)
       {}
     };
 
