@@ -35,7 +35,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       float t = tMax;
       while(current_node != nullptr)
       {
-        if(!current_node->is_leaf())
+        if(!is_leaf(current_node))
         {
           hit = intersectBox(o, invDir,
                              current_node->min_corner_,
@@ -129,6 +129,8 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       Point min_corner_;
       Point max_corner_;
 
+      node() = default;
+
       node(const node* hit_node,
            const node* miss_node,
            const Point& min_corner,
@@ -153,27 +155,21 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
           min_corner_(std::numeric_limits<float>::quiet_NaN(), coerce<float>(primitive_index), 0)
       {}
 
-      bool is_leaf() const
-      {
-        return min_corner_[0] != min_corner_[0];
-      }
-
       size_t primitive_index() const
       {
-        assert(is_leaf());
         return coerce<size_t>(min_corner_[1]);
       }
     };
 
 
     template<typename Bounder>
-    static void make_tree_recursive(std::vector<node>& tree,
-                                    const node* miss_node,
-                                    const node* right_brother,
-                                    std::vector<size_t>::iterator begin,
-                                    std::vector<size_t>::iterator end,
-                                    const std::vector<PrimitiveType> &primitives,
-                                    Bounder &bound)
+    static const node* make_tree_recursive(std::vector<node>& tree,
+                                           const node* miss_node,
+                                           const node* right_brother,
+                                           std::vector<size_t>::iterator begin,
+                                           std::vector<size_t>::iterator end,
+                                           const std::vector<PrimitiveType> &primitives,
+                                           Bounder &bound)
     {
       if(begin + 1 == end)
       {
@@ -181,7 +177,10 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         // a left leaf's hit index is always the right brother
         const node* hit_node = right_brother == nullptr ? miss_node : right_brother;
 
-        tree.emplace_back(hit_node, miss_node, *begin);
+        // leaves come at the beginning of the tree
+        node* result = &tree[*begin];
+        *result = node(hit_node, miss_node, *begin);
+        return result;
       } // end if
       else
       {
@@ -200,15 +199,14 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         std::nth_element(begin, split, end, sorter);
 
         // build the right subtree first
-        make_tree_recursive(tree, miss_node, nullptr, split, end, primitives, bound);
-        const node* right_child = &tree.back();
+        const node* right_child = make_tree_recursive(tree, miss_node, nullptr, split, end, primitives, bound);
 
         // we have to pass the right child to the left subtree build
-        make_tree_recursive(tree, right_child, right_child, begin, split, primitives, bound);
-        const node* left_child = &tree.back();
+        const node* left_child = make_tree_recursive(tree, right_child, right_child, begin, split, primitives, bound);
 
         // create a new node
         tree.emplace_back(left_child, miss_node, m, M);
+        return &tree.back();
       }
     }
 
@@ -223,6 +221,9 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       // reserve 2*n - 1 nodes to ensure that no iterators are invalidated during construction
       std::vector<node> tree;
       tree.reserve(2 * primitives.size() - 1);
+
+      // create the leaves first so that they come first in the array
+      tree.resize(primitives.size());
     
       // create a CachedBounder
       CachedBounder<Bounder> cachedBound(bound,primitives);
@@ -239,6 +240,13 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       assert(tree.size() == 2 * primitives.size() - 1);
 
       return tree;
+    }
+
+    bool is_leaf(const node* n) const
+    {
+      size_t index = n - nodes_.data();
+
+      return index < (nodes_.size() + 1) / 2;
     }
 
     const node* root_node() const
