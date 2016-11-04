@@ -82,9 +82,7 @@ template<typename PrimitiveType,
     hitIndex = nodes_[currentNode].hit_index_;
     missIndex = nodes_[currentNode].miss_index_;
 
-    // leaves (primitives) are listed before interior nodes
-    // so bounding boxes occur after the root index
-    if(currentNode >= root_index_)
+    if(!nodes_[currentNode].is_leaf())
     {
       hit = intersectBox(o, invDir,
                          nodes_[currentNode].min_corner_,
@@ -306,11 +304,9 @@ template<typename PrimitiveType,
          typename RealType>
 size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::computeHitIndex(const size_t i) const
 {
-  // case 1
-  // return the left index if we are an interior node
-  size_t result = nodes_[i].left_child_index_;
+  size_t result = 0;
   
-  if(result == null_node)
+  if(nodes_[i].is_leaf())
   {
     // case 1
     // the next node to visit after a hit is our right brother, 
@@ -323,6 +319,11 @@ size_t bounding_volume_hierarchy<PrimitiveType, PointType, RealType>::computeHit
       result = computeMissIndex(nodes_[i].parent_index_);
     } // end if
   } // end if
+  else
+  {
+    // return the left child if we are an interior node
+    result = nodes_[i].left_child_index_;
+  }
 
   return result;
 } // end bounding_volume_hierarchy::computeMissIndex()

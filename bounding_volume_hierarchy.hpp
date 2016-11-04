@@ -143,6 +143,11 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
           left_child_index_(null_node),
           right_child_index_(null_node)
       {}
+
+      bool is_leaf() const
+      {
+        return left_child_index_ == null_node;
+      }
     };
 
     std::vector<node> nodes_;
