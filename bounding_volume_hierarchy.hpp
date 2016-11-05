@@ -23,10 +23,9 @@ class bounding_volume_hierarchy
   public:
     using element_type = T;
 
-    // XXX should take a contiguous range instead of a vector
-    template<class Bounder>
-    bounding_volume_hierarchy(const std::vector<T>& primitives, Bounder& bound, float epsilon = std::numeric_limits<float>::epsilon())
-      : primitives_(primitives.data()), nodes_(make_tree(primitives, bound, epsilon))
+    template<class ContiguousRange, class Bounder>
+    bounding_volume_hierarchy(const ContiguousRange& primitives, Bounder& bound, float epsilon = std::numeric_limits<float>::epsilon())
+      : primitives_(&*primitives.begin()), nodes_(make_tree(primitives, bound, epsilon))
     {}
 
     template<class Point, class Vector, typename Interval = std::array<float,2>, class Function = call_member_intersect>
@@ -241,13 +240,13 @@ class bounding_volume_hierarchy
     };
 
 
-    template<typename Bounder>
+    template<class ContiguousRange, class Bounder>
     static const node* make_tree_recursive(std::vector<node>& tree,
                                            const node* miss_node,
                                            const node* right_brother,
                                            std::vector<size_t>::iterator begin,
                                            std::vector<size_t>::iterator end,
-                                           const std::vector<T> &primitives,
+                                           const ContiguousRange &primitives,
                                            Bounder &bound,
                                            float epsilon)
     {
@@ -290,8 +289,8 @@ class bounding_volume_hierarchy
     }
 
 
-    template<typename Bounder>
-    static std::vector<node> make_tree(const std::vector<T> &primitives, Bounder &bound, float epsilon)
+    template<class ContiguousRange, class Bounder>
+    static std::vector<node> make_tree(const ContiguousRange &primitives, Bounder &bound, float epsilon)
     {
       // we will sort an array of indices
       std::vector<size_t> indices(primitives.size());
