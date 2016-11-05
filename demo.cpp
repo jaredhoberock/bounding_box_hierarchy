@@ -59,9 +59,8 @@ struct intersect_triangle
 {
   const std::vector<triangle>& triangles;
 
-  bool operator()(int idx, const point& origin, const point& direction, float& t) const
+  bool operator()(const triangle& tri, const point& origin, const point& direction, float& t) const
   {
-    const triangle& tri = triangles[idx];
     const point& p0 = tri[0];
     const point& p1 = tri[1];
     const point& p2 = tri[2];
@@ -96,6 +95,11 @@ struct intersect_triangle
     t = inv_divisor * dot(e2,s2);
 
     return true;
+  }
+
+  bool operator()(int idx, const point& origin, const point& direction, float& t) const
+  {
+    return operator()(triangles[idx], origin, direction, t);
   }
 
   bool operator()(const point& origin, const point& direction, int idx, float& t) const

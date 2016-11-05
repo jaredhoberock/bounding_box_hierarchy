@@ -21,7 +21,7 @@ template<typename PrimitiveType>
     {}
 
     template<class Point, class Vector, class Function, typename Interval = std::array<float,2>>
-    bool intersect(Point origin, Vector direction, Function intersect, Interval interval = Interval{0.f, 1.f}) const
+    bool intersect(Point origin, Vector direction, Function intersector, Interval interval = Interval{0.f, 1.f}) const
     {
       point one_over_direction;
       one_over_direction[0] = 1.f / direction[0];
@@ -46,7 +46,7 @@ template<typename PrimitiveType>
           // the index of the primitive contained inside the leaf node is the same as the leaf node's index
           size_t primitive_idx = current_node - nodes_.data();
 
-          hit = intersect(origin, direction, primitive_idx, t) && interval[0] < t && t < interval[1];
+          hit = intersector(primitive_idx, origin, direction, t) && interval[0] < t && t < interval[1];
           result |= hit;
           if(hit)
             interval[1] = std::min(t, interval[1]);
