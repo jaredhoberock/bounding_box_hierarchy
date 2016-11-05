@@ -193,13 +193,26 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
   {
     auto& ray = rays[i];
 
+    float nearest_hit = std::numeric_limits<float>::infinity();
+    const triangle* nearest_triangle = nullptr;
+
     for(const auto& tri : triangles)
     {
-      if(tri.intersect(ray.first, ray.second, {0,1}))
+      auto current_hit = tri.intersect(ray.first, ray.second, {0,1});
+
+      if(current_hit)
       {
-        reference.push_back(i);
-        break;
+        if(*current_hit < nearest_hit)
+        {
+          nearest_hit = *current_hit;
+          nearest_triangle = &tri;
+        }
       }
+    }
+
+    if(nearest_triangle != nullptr)
+    {
+      reference.push_back(i);
     }
   }
 
