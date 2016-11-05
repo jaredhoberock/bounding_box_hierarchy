@@ -116,10 +116,7 @@ class bounding_volume_hierarchy
         }
         else
         {
-          // the index of the element corresponding to the leaf node is the same as the leaf node's index
-          size_t element_idx = current_node - nodes_.data();
-
-          hit_current_node = intersector(elements_[element_idx], origin, direction, t);
+          hit_current_node = intersector(element(current_node), origin, direction, t);
           
           if(hit_current_node)
           {
@@ -357,6 +354,14 @@ class bounding_volume_hierarchy
       assert(tree.size() == 2 * elements.size() - 1);
 
       return tree;
+    }
+
+    
+    const T& element(const node* leaf) const
+    {
+      // the index of the element corresponding to the leaf node is the same as the leaf node's index
+      size_t element_idx = leaf - nodes_.data();
+      return elements_[element_idx];
     }
 
 
