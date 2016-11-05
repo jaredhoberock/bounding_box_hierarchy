@@ -5,8 +5,6 @@
 #include <numeric>
 
 #include "bounding_volume_hierarchy.hpp"
-#include "BoundingVolumeHierarchy.h"
-#include "optional.hpp"
 
 struct point : std::array<float,3>
 {
@@ -15,17 +13,21 @@ struct point : std::array<float,3>
   point(float x, float y, float z) : std::array<float,3>{x,y,z} {}
 };
 
+
 point operator-(const point& lhs, const point& rhs)
 {
   return {lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]};
 }
 
+
 using vector = point;
+
 
 float dot(const vector& lhs, const vector& rhs)
 {
   return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0.f);
 }
+
 
 vector cross(const vector& lhs, const vector& rhs)
 {
@@ -42,6 +44,7 @@ vector cross(const vector& lhs, const vector& rhs)
   
   return result;
 }
+
 
 struct triangle : std::array<point,3>
 {
@@ -102,54 +105,6 @@ struct triangle : std::array<point,3>
 };
 
 
-struct triangle_bounding_box
-{
-  auto operator()(const triangle& tri) const
-  {
-    return tri.bounding_box();
-  }
-
-  float operator()(const triangle& tri, int axis, bool min) const
-  {
-    if(min)
-    {
-      return std::min(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
-    }
-
-    return std::max(tri[0][axis], std::max(tri[1][axis], tri[2][axis]));
-  }
-
-  float operator()(int axis, bool min, const triangle& tri) const
-  {
-    return operator()(tri, axis, min);
-  }
-};
-
-
-struct triangle_intersect
-{
-  const std::vector<triangle>& triangles;
-
-  bool operator()(const triangle& tri, const point& origin, const point& direction, float& t) const
-  {
-    std::array<float,2> interval{0, 1};
-    auto result = tri.intersect(origin, direction, interval);
-    if(result) t = *result;
-    return bool(result);
-  }
-
-  bool operator()(int idx, const point& origin, const point& direction, float& t) const
-  {
-    return operator()(triangles[idx], origin, direction, t);
-  }
-
-  bool operator()(const point& origin, const point& direction, int idx, float& t) const
-  {
-    return operator()(idx, origin, direction, t);
-  }
-};
-
-
 std::vector<triangle> random_triangles_in_unit_cube(size_t n, int seed = 0)
 {
   std::mt19937 rng(seed);
@@ -191,32 +146,17 @@ std::vector<std::pair<point,vector>> random_rays_in_unit_cube(size_t n, int seed
   return result;
 }
 
+
 void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
 {
   // generate some random triangles
   auto triangles = random_triangles_in_unit_cube(num_triangles, seed);
 
-  // build bvhs
-  BoundingVolumeHierarchy<triangle, point> old_bvh;
-  triangle_bounding_box bound;
-  old_bvh.build(triangles, bound);
-
-  bounding_volume_hierarchy<triangle> new_bvh(triangles);
+  // build bvh
+  bounding_volume_hierarchy<triangle> bvh(triangles);
 
   // generate some random rays
   auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
-
-  std::vector<int> old_intersections;
-  for(int i = 0; i < rays.size(); ++i)
-  {
-    auto& ray = rays[i];
-
-    triangle_intersect intersector{triangles};
-    if(old_bvh.intersect(ray.first, ray.second, 0.f, 1.f, intersector))
-    {
-      old_intersections.push_back(i);
-    }
-  }
 
   std::vector<int> new_intersections;
   for(int i = 0; i < rays.size(); ++i)
@@ -228,14 +168,6 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
       new_intersections.push_back(i);
     }
   }
-
-  if(new_intersections != old_intersections)
-  {
-    std::cerr << "old_intersections.size(): " << old_intersections.size() << std::endl;
-    std::cerr << "new_intersections.size(): " << new_intersections.size() << std::endl;
-  }
-
-  assert(new_intersections == old_intersections);
 }
 
 
