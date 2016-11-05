@@ -7,12 +7,11 @@
 #include <numeric>
 #include <cassert>
 
-template<typename PrimitiveType, typename RealType = float>
+template<typename PrimitiveType>
   class bounding_volume_hierarchy
 {
   public:
     typedef PrimitiveType Primitive;
-    typedef RealType Real;
 
     static const float EPS;
 
@@ -21,36 +20,36 @@ template<typename PrimitiveType, typename RealType = float>
       : nodes_(make_tree(primitives, bound))
     {}
 
-    template<class Point, class Vector, typename Intersector>
-    bool intersect(const Point &origin, const Vector &direction, Real tMin, Real tMax, Intersector &intersect) const
+    template<class Point, class Vector, class Function, typename Interval = std::array<float,2>>
+    bool intersect(Point origin, Vector direction, Function intersect, Interval interval = Interval{0.f, 1.f}) const
     {
-      point invDir;
-      invDir[0] = Real(1.0) / direction[0];
-      invDir[1] = Real(1.0) / direction[1];
-      invDir[2] = Real(1.0) / direction[2];
+      point one_over_direction;
+      one_over_direction[0] = 1.f / direction[0];
+      one_over_direction[1] = 1.f / direction[1];
+      one_over_direction[2] = 1.f / direction[2];
 
       const node* current_node = root_node();
       bool hit = false;
       bool result = false;
-      float t = tMax;
+      auto t = interval[1];
       while(current_node != nullptr)
       {
         if(!is_leaf(current_node))
         {
-          hit = intersect_box(origin, invDir,
+          hit = intersect_box(origin, one_over_direction,
                               current_node->min_corner_,
                               current_node->max_corner_,
-                              tMin, tMax);
+                              interval);
         }
         else
         {
           // the index of the primitive contained inside the leaf node is the same as the leaf node's index
           size_t primitive_idx = current_node - nodes_.data();
 
-          hit = intersect(origin, direction, primitive_idx, t) && t < tMax && t > tMin;
+          hit = intersect(origin, direction, primitive_idx, t) && interval[0] < t && t < interval[1];
           result |= hit;
           if(hit)
-            tMax = std::min(t, tMax);
+            interval[1] = std::min(t, interval[1]);
         }
 
         current_node = hit ? current_node->hit_node_ : current_node->miss_node_;
@@ -62,30 +61,30 @@ template<typename PrimitiveType, typename RealType = float>
   private:
     using point = std::array<float,3>;
 
-    template<class Point, class Vector>
-    static bool intersect_box(const Point &o, const Vector &one_over_direction,
+    template<class Point, class Vector, class Interval>
+    static bool intersect_box(Point origin, Vector one_over_direction,
                               const point &min_corner, const point &max_corner, 
-                              const Real &tMin, const Real &tMax)
+                              Interval interval)
     {
-      point tMin3, tMax3;
+      point t_min3, t_max3;
       for(int i = 0; i < 3; ++i)
       {
-        tMin3[i] = (min_corner[i] - o[i]) * one_over_direction[i];
-        tMax3[i] = (max_corner[i] - o[i]) * one_over_direction[i];
+        t_min3[i] = (min_corner[i] - origin[i]) * one_over_direction[i];
+        t_max3[i] = (max_corner[i] - origin[i]) * one_over_direction[i];
       }
 
-      point tNear3{std::min(tMin3[0], tMax3[0]),
-                   std::min(tMin3[1], tMax3[1]),
-                   std::min(tMin3[2], tMax3[2])};
-      point  tFar3{std::max(tMin3[0], tMax3[0]),
-                   std::max(tMin3[1], tMax3[1]),
-                   std::max(tMin3[2], tMax3[2])};
+      point t_near3{std::min(t_min3[0], t_max3[0]),
+                    std::min(t_min3[1], t_max3[1]),
+                    std::min(t_min3[2], t_max3[2])};
+      point  t_far3{std::max(t_min3[0], t_max3[0]),
+                    std::max(t_min3[1], t_max3[1]),
+                    std::max(t_min3[2], t_max3[2])};
 
-      Real tNear = std::max(std::max(tNear3[0], tNear3[1]), tNear3[2]);
-      Real tFar  = std::min(std::min( tFar3[0],  tFar3[1]),  tFar3[2]);
+      auto t_near = std::max(std::max(t_near3[0], t_near3[1]), t_near3[2]);
+      auto t_far  = std::min(std::min(t_far3[0],  t_far3[1]),  t_far3[2]);
 
-      bool hit = tNear <= tFar;
-      return hit && tMax >= tNear && tMin <= tFar;
+      bool hit = t_near <= t_far;
+      return hit && interval[0] <= t_far && t_near <= interval[1];
     }
 
 
@@ -116,8 +115,8 @@ template<typename PrimitiveType, typename RealType = float>
         } // end operator()()
 
       protected:
-        std::vector<RealType> mPrimMinBounds[3];
-        std::vector<RealType> mPrimMaxBounds[3];
+        std::vector<float> mPrimMinBounds[3];
+        std::vector<float> mPrimMaxBounds[3];
     }; // end CachedBounder
 
     template<typename Bounder>
