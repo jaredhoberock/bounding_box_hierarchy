@@ -164,7 +164,25 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
   {
     auto& ray = rays[i];
 
-    if(bvh.intersect(ray.first, ray.second))
+    auto intersection = bvh.intersect(ray.first, ray.second, {0,1}, [](const auto& tri, const auto& o, const auto& d, const auto& i)
+    {
+      auto intermediate_result = tri.intersect(o,d,i);
+
+      if(intermediate_result)
+      {
+        auto result = std::make_pair(&tri, *intermediate_result);
+        return std::experimental::make_optional(result);
+      }
+
+      return std::experimental::optional<std::pair<const triangle*,float>>();
+    },
+    [](const auto& result)
+    {
+      // the hit time is the pair's second half
+      return result.second;
+    });
+
+    if(intersection)
     {
       bvh_intersections.push_back(i);
     }
