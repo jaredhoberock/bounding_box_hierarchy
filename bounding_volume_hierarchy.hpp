@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
-#include <tuple> // XXX eliminate this
 #include <type_traits>
 #include <cassert>
 
@@ -30,10 +29,6 @@ class bounding_volume_hierarchy
       }
     };
 
-    // XXX instead of defining point privately
-    //     maybe define bounding_box_type publicly?
-    using point = std::array<float,3>;
-
   public:
     using element_type = T;
 
@@ -46,7 +41,11 @@ class bounding_volume_hierarchy
       : elements_(&*elements.begin()), nodes_(make_tree(elements, bounder, epsilon))
     {}
 
-    std::array<point,2> bounding_box() const
+    // a bounding box is an array of two arrays of three floats
+    // XXX if T::bounding_box() exists, we should use its result for our bounding_box_type
+    using bounding_box_type = std::array<std::array<float,3>,2>;
+
+    bounding_box_type bounding_box() const
     {
       return {root_node().min_corner_, root_node().max_corner_};
     }
@@ -54,7 +53,7 @@ class bounding_volume_hierarchy
     template<class Point, class Vector, typename Interval = std::array<float,2>, class Function = call_member_intersect>
     bool intersect(Point origin, Vector direction, Interval interval = Interval{0.f, 1.f}, Function intersector = call_member_intersect()) const
     {
-      point one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
+      Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
 
       const node* current_node = root_node();
       bool hit = false;
@@ -64,7 +63,7 @@ class bounding_volume_hierarchy
       {
         if(!is_leaf(current_node))
         {
-          hit = intersect_box(origin, one_over_direction, current_node->min_corner_, current_node->max_corner_, interval);
+          hit = intersect_box(origin, one_over_direction, current_node->bounding_box_, interval);
         }
         else
         {
@@ -85,17 +84,17 @@ class bounding_volume_hierarchy
 
   private:
     template<class Point, class Vector, class Interval>
-    static bool intersect_box(Point origin, Vector one_over_direction, const point &min_corner, const point &max_corner, Interval interval)
+    static bool intersect_box(Point origin, Vector one_over_direction, const bounding_box_type& box, Interval interval)
     {
-      point t_min3, t_max3;
+      Point t_min3, t_max3;
       for(int i = 0; i < 3; ++i)
       {
-        t_min3[i] = (min_corner[i] - origin[i]) * one_over_direction[i];
-        t_max3[i] = (max_corner[i] - origin[i]) * one_over_direction[i];
+        t_min3[i] = (box[0][i] - origin[i]) * one_over_direction[i];
+        t_max3[i] = (box[1][i] - origin[i]) * one_over_direction[i];
       }
 
-      point t_near3{std::min(t_min3[0], t_max3[0]), std::min(t_min3[1], t_max3[1]), std::min(t_min3[2], t_max3[2])};
-      point  t_far3{std::max(t_min3[0], t_max3[0]), std::max(t_min3[1], t_max3[1]), std::max(t_min3[2], t_max3[2])};
+      Point t_near3{std::min(t_min3[0], t_max3[0]), std::min(t_min3[1], t_max3[1]), std::min(t_min3[2], t_max3[2])};
+      Point  t_far3{std::max(t_min3[0], t_max3[0]), std::max(t_min3[1], t_max3[1]), std::max(t_min3[2], t_max3[2])};
 
       auto t_near = std::max(std::max(t_near3[0], t_near3[1]), t_near3[2]);
       auto t_far  = std::min(std::min(t_far3[0],  t_far3[1]),  t_far3[2]);
@@ -109,6 +108,8 @@ class bounding_volume_hierarchy
     template<class Bounder>
     struct memoized_bounder
     {
+      // we're memoizing the result of Bounder, which returns a bounding_box_type
+      // that may be different than the type of bounding box used by bounding_volume_hierarchy
       using bounding_box_type = std::result_of_t<Bounder(const T&)>;
 
       // avoid copying this thing unintentionally
@@ -134,15 +135,14 @@ class bounding_volume_hierarchy
 
 
     template<typename Bounder>
-    static std::array<point,2> bounding_box(const std::vector<size_t>::iterator begin,
-                                            const std::vector<size_t>::iterator end,
-                                            const std::vector<T> &elements,
-                                            memoized_bounder<Bounder>& bounder,
-                                            float epsilon)
+    static bounding_box_type bounding_box(const std::vector<size_t>::iterator begin,
+                                          const std::vector<size_t>::iterator end,
+                                          const std::vector<T> &elements,
+                                          memoized_bounder<Bounder>& bounder,
+                                          float epsilon)
     {
       float inf = std::numeric_limits<float>::infinity();
-      point min_corner{ inf,  inf,  inf};
-      point max_corner{-inf, -inf, -inf};
+      bounding_box_type result{{{inf, inf, inf}, {-inf, -inf, -inf}}};
 
       float x;
           
@@ -154,8 +154,8 @@ class bounding_volume_hierarchy
 
         for(int i = 0; i < 3; ++i)
         {
-          min_corner[i] = std::min(min_corner[i], std::get<0>(bounding_box)[i]);
-          max_corner[i] = std::max(max_corner[i], std::get<1>(bounding_box)[i]);
+          result[0][i] = std::min(result[0][i], std::get<0>(bounding_box)[i]);
+          result[1][i] = std::max(result[1][i], std::get<1>(bounding_box)[i]);
         }
       }
 
@@ -165,11 +165,11 @@ class bounding_volume_hierarchy
       // lie strictly within the bounding box
       for(size_t i = 0; i != 3; ++i)
       {
-        min_corner[i] -= epsilon;
-        max_corner[i] += epsilon;
+        result[0][i] -= epsilon;
+        result[1][i] += epsilon;
       }
 
-      return {min_corner, max_corner};
+      return result;
     }
 
     template<typename Bounder>
@@ -198,26 +198,39 @@ class bounding_volume_hierarchy
     };
 
 
-    static size_t findPrincipalAxis(const point &min, const point &max);
+    static size_t largest_axis(const bounding_box_type& box)
+    {
+      // find the largest dimension of the box
+      size_t axis = 0;
+      float largest_length = -std::numeric_limits<float>::infinity();
+      for(size_t i = 0; i < 3; ++i)
+      {
+        float length = box[1][i] - box[0][i];
+        if(length > largest_length)
+        {
+          largest_length = length;
+          axis = i;
+        }
+      }
+
+      return axis;
+    }
 
 
     struct node
     {
       const node* hit_node_;
       const node* miss_node_;
-      point min_corner_;
-      point max_corner_;
+      bounding_box_type bounding_box_;
 
       node() = default;
 
       node(const node* hit_node,
            const node* miss_node,
-           const point& min_corner,
-           const point& max_corner)
+           const bounding_box_type& bounding_box)
         : hit_node_(hit_node),
           miss_node_(miss_node),
-          min_corner_(min_corner),
-          max_corner_(max_corner)
+          bounding_box_(bounding_box)
       {}
 
       template<class To, class From>
@@ -230,14 +243,8 @@ class bounding_volume_hierarchy
 
       node(const node* hit_node, const node* miss_node, size_t primitive_index)
         : hit_node_(hit_node),
-          miss_node_(miss_node),
-          min_corner_{coerce<float>(primitive_index), 0, 0}
+          miss_node_(miss_node)
       {}
-
-      size_t element_index() const
-      {
-        return coerce<size_t>(min_corner_[0]);
-      }
     };
 
 
@@ -264,10 +271,10 @@ class bounding_volume_hierarchy
       }
       else
       {
-        // find the bounds of the elements
-        std::array<point,2> bounds = bounding_box(begin, end, elements, bounder, epsilon);
+        // find the bounding box of the elements
+        bounding_box_type box = bounding_box(begin, end, elements, bounder, epsilon);
 
-        size_t axis = findPrincipalAxis(bounds[0], bounds[1]);
+        size_t axis = largest_axis(box);
 
         // create an ordering
         sort_bounding_boxes_by_axis<Bounder> compare(axis,elements,bounder);
@@ -284,7 +291,7 @@ class bounding_volume_hierarchy
         const node* left_child = make_tree_recursive(tree, right_child, right_child, begin, split, elements, bounder, epsilon);
 
         // create a new node
-        tree.emplace_back(left_child, miss_node, bounds[0], bounds[1]);
+        tree.emplace_back(left_child, miss_node, box);
         return &tree.back();
       }
     }
@@ -340,6 +347,4 @@ class bounding_volume_hierarchy
     const T* elements_;
     std::vector<node> nodes_;
 };
-
-#include "bounding_volume_hierarchy.inl"
 
