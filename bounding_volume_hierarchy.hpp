@@ -200,12 +200,12 @@ class bounding_volume_hierarchy
     }
 
     template<typename Bounder>
-      struct element_sorter
+      struct sort_bounding_boxes_by_axis
     {
       template<class ContiguousRange>
-      element_sorter(const size_t axis_,
-                     const ContiguousRange& elements_,
-                     Bounder &bounder_)
+      sort_bounding_boxes_by_axis(const size_t axis_,
+                                  const ContiguousRange& elements_,
+                                  Bounder &bounder_)
         :axis(axis_),elements(&*elements_.begin()),bounder(bounder_)
       {
         ;
@@ -298,7 +298,7 @@ class bounding_volume_hierarchy
         size_t axis = findPrincipalAxis(bounds.first, bounds.second);
 
         // create an ordering
-        element_sorter<Bounder> sorter(axis,elements,bounder);
+        sort_bounding_boxes_by_axis<Bounder> sorter(axis,elements,bounder);
         
         // sort the median
         std::vector<size_t>::iterator split = begin + (end - begin) / 2;
