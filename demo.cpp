@@ -83,45 +83,6 @@ struct triangle : std::array<point,3>
     return (interval[0] <= t && t < interval[1]) ? std::experimental::make_optional(t) : std::experimental::nullopt;
   }
 
-  // XXX eliminate this
-  bool intersect(const point& origin, const point& direction, float& t) const
-  {
-    const point& p0 = (*this)[0];
-    const point& p1 = (*this)[1];
-    const point& p2 = (*this)[2];
-
-    vector e1 = p1 - p0;
-    vector e2 = p2 - p0;
-    vector s1 = cross(direction,e2);
-    float divisor = dot(s1,e1);
-    if(divisor == 0.f)
-    {
-      return false;
-    }
-
-    float inv_divisor = 1.f / divisor;
-
-    // compute barycentric coordinates 
-    vector d = origin - p0;
-    float b0 = dot(d,s1) * inv_divisor;
-    if(b0 < 0.f || b0 > 1.f)
-    {
-      return false;
-    }
-
-    vector s2 = cross(d,e1);
-    float b1 = dot(direction, s2) * inv_divisor;
-    if(b1 < 0.f || b0 + b1 > 1.f)
-    {
-      return false;
-    }
-
-    // compute t
-    t = inv_divisor * dot(e2,s2);
-
-    return true;
-  }
-
   std::array<point,2> bounding_box() const
   {
     point min_corner;
@@ -171,7 +132,10 @@ struct triangle_intersect
 
   bool operator()(const triangle& tri, const point& origin, const point& direction, float& t) const
   {
-    return tri.intersect(origin, direction, t);
+    std::array<float,2> interval{0, 1};
+    auto result = tri.intersect(origin, direction, interval);
+    if(result) t = *result;
+    return bool(result);
   }
 
   bool operator()(int idx, const point& origin, const point& direction, float& t) const
