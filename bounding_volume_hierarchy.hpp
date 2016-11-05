@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
+#include <tuple>
+#include <type_traits>
 #include <cassert>
 
 template<typename T>
@@ -102,49 +104,47 @@ class bounding_volume_hierarchy
 
 
     template<class Bounder>
-    class memoized_bounder
+    struct memoized_bounder
     {
-      public:
-        template<class ContiguousRange>
-        memoized_bounder(const ContiguousRange& elements, Bounder bound)
+      using pair_of_points = std::result_of_t<Bounder(const T&)>;
+      using min_corner_type = std::tuple_element_t<0,pair_of_points>;
+      using max_corner_type = std::tuple_element_t<1,pair_of_points>;
+
+      template<class ContiguousRange>
+      memoized_bounder(const ContiguousRange& elements, Bounder bounding_box)
+      {
+        min_corners.resize(elements.size());
+        max_corners.resize(elements.size());
+
+        size_t i = 0;
+        for(auto element = elements.begin(); element != elements.end(); ++element, ++i)
         {
-          mPrimMinBounds[0].resize(elements.size());
-          mPrimMinBounds[1].resize(elements.size());
-          mPrimMinBounds[2].resize(elements.size());
+          // XXX need to just call bounding box once and destructure the result with tie()
+          min_corners[i][0] = bounding_box(*element, 0, true);
+          min_corners[i][1] = bounding_box(*element, 1, true);
+          min_corners[i][2] = bounding_box(*element, 2, true);
 
-          mPrimMaxBounds[0].resize(elements.size());
-          mPrimMaxBounds[1].resize(elements.size());
-          mPrimMaxBounds[2].resize(elements.size());
+          max_corners[i][0] = bounding_box(*element, 0, false);
+          max_corners[i][1] = bounding_box(*element, 1, false);
+          max_corners[i][2] = bounding_box(*element, 2, false);
+        }
+      }
 
-          size_t i = 0;
-          for(auto element = elements.begin(); element != elements.end(); ++element, ++i)
-          {
-            mPrimMinBounds[0][i] = bound(*element, 0, true);
-            mPrimMinBounds[1][i] = bound(*element, 1, true);
-            mPrimMinBounds[2][i] = bound(*element, 2, true);
+      // XXX operator()() needs to be:
+      // result_of_t<Bounder(T)> operator()(const T& element) const
 
-            mPrimMaxBounds[0][i] = bound(*element, 0, false);
-            mPrimMaxBounds[1][i] = bound(*element, 1, false);
-            mPrimMaxBounds[2][i] = bound(*element, 2, false);
-          }
+      float operator()(const size_t axis, const bool min, size_t element_idx)
+      {
+        if(min)
+        {
+          return min_corners[element_idx][axis];
         }
 
-        // XXX operator()() needs to be:
-        // result_of_t<Bounder(T)> operator()(const T& element) const
+        return max_corners[element_idx][axis];
+      }
 
-        float operator()(const size_t axis, const bool min, size_t element_idx)
-        {
-          if(min)
-          {
-            return mPrimMinBounds[axis][element_idx];
-          }
-
-          return mPrimMaxBounds[axis][element_idx];
-        }
-
-      protected:
-        std::vector<float> mPrimMinBounds[3];
-        std::vector<float> mPrimMaxBounds[3];
+      std::vector<min_corner_type> min_corners;
+      std::vector<max_corner_type> max_corners;
     };
 
 
