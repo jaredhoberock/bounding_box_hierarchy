@@ -159,60 +159,60 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
   // generate some random rays
   auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
 
-  std::vector<int> bvh_intersections;
+  using intersection_type = std::pair<const triangle*,float>;
+
+  std::vector<intersection_type> bvh_intersections;
   for(int i = 0; i < rays.size(); ++i)
   {
     auto& ray = rays[i];
 
     auto intersection = bvh.intersect(ray.first, ray.second, {0,1}, [](const auto& tri, const auto& o, const auto& d, const auto& i)
     {
-      auto intermediate_result = tri.intersect(o,d,i);
+      std::experimental::optional<float> intermediate_result = tri.intersect(o,d,i);
 
       if(intermediate_result)
       {
-        auto result = std::make_pair(&tri, *intermediate_result);
+        auto result = intersection_type(&tri, *intermediate_result);
         return std::experimental::make_optional(result);
       }
 
-      return std::experimental::optional<std::pair<const triangle*,float>>();
+      return std::experimental::optional<intersection_type>();
     },
     [](const auto& result)
     {
-      // the hit time is the pair's second half
+      // the hit time is the intersection's second half
       return result.second;
     });
 
     if(intersection)
     {
-      bvh_intersections.push_back(i);
+      bvh_intersections.push_back(*intersection);
     }
   }
 
-  std::vector<int> reference;
+  std::vector<intersection_type> reference;
   for(int i = 0; i < rays.size(); ++i)
   {
     auto& ray = rays[i];
 
-    float nearest_hit = std::numeric_limits<float>::infinity();
-    const triangle* nearest_triangle = nullptr;
+    std::experimental::optional<intersection_type> nearest_intersection;
 
     for(const auto& tri : triangles)
     {
-      auto current_hit = tri.intersect(ray.first, ray.second, {0,1});
+      std::experimental::optional<float> current_intersection = tri.intersect(ray.first, ray.second, {0,1});
 
-      if(current_hit)
+      if(current_intersection)
       {
-        if(*current_hit < nearest_hit)
+        if(!nearest_intersection || *current_intersection < nearest_intersection->second)
         {
-          nearest_hit = *current_hit;
-          nearest_triangle = &tri;
+          nearest_intersection = intersection_type(&tri,*current_intersection);
         }
       }
     }
 
-    if(nearest_triangle != nullptr)
+    if(nearest_intersection)
     {
-      reference.push_back(i);
+      reference.push_back(*nearest_intersection);
     }
   }
 
