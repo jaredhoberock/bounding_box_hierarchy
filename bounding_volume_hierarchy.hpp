@@ -63,9 +63,7 @@ class bounding_volume_hierarchy
     using point = std::array<float,3>;
 
     template<class Point, class Vector, class Interval>
-    static bool intersect_box(Point origin, Vector one_over_direction,
-                              const point &min_corner, const point &max_corner, 
-                              Interval interval)
+    static bool intersect_box(Point origin, Vector one_over_direction, const point &min_corner, const point &max_corner, Interval interval)
     {
       point t_min3, t_max3;
       for(int i = 0; i < 3; ++i)
