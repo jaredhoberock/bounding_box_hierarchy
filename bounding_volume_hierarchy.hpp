@@ -170,8 +170,8 @@ class bounding_volume_hierarchy
 
         for(int i = 0; i < 3; ++i)
         {
-          result[0][i] = std::min(result[0][i], std::get<0>(bounding_box)[i]);
-          result[1][i] = std::max(result[1][i], std::get<1>(bounding_box)[i]);
+          result[0][i] = std::min(result[0][i], bounding_box[0][i]);
+          result[1][i] = std::max(result[1][i], bounding_box[1][i]);
         }
       }
 
