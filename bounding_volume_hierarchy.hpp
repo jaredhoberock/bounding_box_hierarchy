@@ -38,7 +38,7 @@ class bounding_volume_hierarchy
     //
     // XXX bounder should come after epsilon? to match the parameter order of similar parameters of intersect()?
     template<class ContiguousRange, class Bounder>
-    bounding_volume_hierarchy(const ContiguousRange& elements, Bounder& bound, float epsilon = std::numeric_limits<float>::epsilon())
+    bounding_volume_hierarchy(const ContiguousRange& elements, Bounder bound, float epsilon = std::numeric_limits<float>::epsilon())
       : elements_(&*elements.begin()), nodes_(make_tree(elements, bound, epsilon))
     {}
 
@@ -311,7 +311,7 @@ class bounding_volume_hierarchy
 
 
     template<class ContiguousRange, class Bounder>
-    static std::vector<node> make_tree(const ContiguousRange &elements, Bounder &bound, float epsilon)
+    static std::vector<node> make_tree(const ContiguousRange &elements, Bounder bound, float epsilon)
     {
       // we will sort an array of indices
       std::vector<size_t> indices(elements.size());
