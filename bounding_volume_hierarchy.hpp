@@ -15,9 +15,10 @@ template<typename PrimitiveType>
 
     static const float EPS;
 
+    // XXX should take a contiguous range of primitives instead of a vector
     template<class Bounder>
     bounding_volume_hierarchy(const std::vector<Primitive>& primitives, Bounder& bound)
-      : nodes_(make_tree(primitives, bound))
+      : primitives_(primitives.data()), nodes_(make_tree(primitives, bound))
     {}
 
     template<class Point, class Vector, class Function, typename Interval = std::array<float,2>>
@@ -46,7 +47,7 @@ template<typename PrimitiveType>
           // the index of the primitive contained inside the leaf node is the same as the leaf node's index
           size_t primitive_idx = current_node - nodes_.data();
 
-          hit = intersector(primitive_idx, origin, direction, t) && interval[0] < t && t < interval[1];
+          hit = intersector(primitives_[primitive_idx], origin, direction, t) && interval[0] < t && t < interval[1];
           result |= hit;
           if(hit)
             interval[1] = std::min(t, interval[1]);
@@ -284,6 +285,7 @@ template<typename PrimitiveType>
       return &nodes_.back();
     }
 
+    const Primitive* primitives_;
     std::vector<node> nodes_;
 };
 
