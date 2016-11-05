@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
+#include <functional>
 #include <type_traits>
 #include <cassert>
 
@@ -134,7 +135,7 @@ class bounding_volume_hierarchy
     static bounding_box_type bounding_box(const std::vector<size_t>::iterator begin,
                                           const std::vector<size_t>::iterator end,
                                           const std::vector<T> &elements,
-                                          memoized_bounder<Bounder>& bounder,
+                                          Bounder bounder,
                                           float epsilon)
     {
       float inf = std::numeric_limits<float>::infinity();
@@ -169,16 +170,14 @@ class bounding_volume_hierarchy
     }
 
     template<typename Bounder>
-      struct sort_bounding_boxes_by_axis
+    struct sort_bounding_boxes_by_axis
     {
       template<class ContiguousRange>
       sort_bounding_boxes_by_axis(const size_t axis_,
                                   const ContiguousRange& elements_,
-                                  Bounder &bounder_)
+                                  Bounder bounder_)
         :axis(axis_),elements(&*elements_.begin()),bounder(bounder_)
-      {
-        ;
-      }
+      {}
 
       bool operator()(const size_t lhs, const size_t rhs) const
       {
@@ -190,7 +189,7 @@ class bounding_volume_hierarchy
 
       size_t axis;
       const T* elements;
-      Bounder& bounder; // XXX make this a value
+      Bounder bounder;
     };
 
 
@@ -251,7 +250,7 @@ class bounding_volume_hierarchy
                                            std::vector<size_t>::iterator begin,
                                            std::vector<size_t>::iterator end,
                                            const ContiguousRange &elements,
-                                           Bounder& bounder,
+                                           Bounder bounder,
                                            float epsilon)
     {
       if(begin + 1 == end)
@@ -317,7 +316,7 @@ class bounding_volume_hierarchy
                           indices.begin(),
                           indices.end(),
                           elements,
-                          memoized_bounder,
+                          std::ref(memoized_bounder),
                           epsilon);
     
       assert(tree.size() == 2 * elements.size() - 1);
