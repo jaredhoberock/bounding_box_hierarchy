@@ -41,29 +41,13 @@ vector cross(const vector& lhs, const vector& rhs)
   return result;
 }
 
-using triangle = std::array<point,3>;
-
-// this should just return a pair of points (min, max)
-float bound_triangle(int axis, bool min, const triangle& tri)
+struct triangle : std::array<point,3>
 {
-  if(min)
+  bool intersect(const point& origin, const point& direction, float& t) const
   {
-    return std::min(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
-  }
-
-  return std::max(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
-}
-
-
-struct intersect_triangle
-{
-  const std::vector<triangle>& triangles;
-
-  bool operator()(const triangle& tri, const point& origin, const point& direction, float& t) const
-  {
-    const point& p0 = tri[0];
-    const point& p1 = tri[1];
-    const point& p2 = tri[2];
+    const point& p0 = (*this)[0];
+    const point& p1 = (*this)[1];
+    const point& p2 = (*this)[2];
 
     vector e1 = p1 - p0;
     vector e2 = p2 - p0;
@@ -95,6 +79,28 @@ struct intersect_triangle
     t = inv_divisor * dot(e2,s2);
 
     return true;
+  }
+};
+
+// this should just return a pair of points (min, max)
+float bound_triangle(int axis, bool min, const triangle& tri)
+{
+  if(min)
+  {
+    return std::min(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
+  }
+
+  return std::max(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
+}
+
+
+struct intersect_triangle
+{
+  const std::vector<triangle>& triangles;
+
+  bool operator()(const triangle& tri, const point& origin, const point& direction, float& t) const
+  {
+    return tri.intersect(origin, direction, t);
   }
 
   bool operator()(int idx, const point& origin, const point& direction, float& t) const
@@ -181,8 +187,7 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
   {
     auto& ray = rays[i];
 
-    intersect_triangle intersector{triangles};
-    if(new_bvh.intersect(ray.first, ray.second, intersector))
+    if(new_bvh.intersect(ray.first, ray.second))
     {
       new_intersections.push_back(i);
     }

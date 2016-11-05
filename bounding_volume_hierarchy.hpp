@@ -10,6 +10,16 @@
 template<typename T>
 class bounding_volume_hierarchy
 {
+  private:
+    struct call_member_intersect
+    {
+      template<class... Args>
+      auto operator()(const T& element, Args&&... args) const
+      {
+        return element.intersect(std::forward<Args>(args)...);
+      }
+    };
+
   public:
     using element_type = T;
 
@@ -19,8 +29,8 @@ class bounding_volume_hierarchy
       : primitives_(primitives.data()), nodes_(make_tree(primitives, bound, epsilon))
     {}
 
-    template<class Point, class Vector, class Function, typename Interval = std::array<float,2>>
-    bool intersect(Point origin, Vector direction, Function intersector, Interval interval = Interval{0.f, 1.f}) const
+    template<class Point, class Vector, typename Interval = std::array<float,2>, class Function = call_member_intersect>
+    bool intersect(Point origin, Vector direction, Interval interval = Interval{0.f, 1.f}, Function intersector = call_member_intersect()) const
     {
       point one_over_direction;
       one_over_direction[0] = 1.f / direction[0];
