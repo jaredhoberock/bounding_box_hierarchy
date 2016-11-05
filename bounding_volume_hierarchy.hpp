@@ -213,7 +213,11 @@ class bounding_volume_hierarchy
 
       bool operator()(const size_t lhs, const size_t rhs) const
       {
-        return bounder(axis, true, lhs) < bounder(axis, true, rhs);
+        // XXX let's not use pair at all and just use std::array consistently
+        auto lhs_val = bounder(elements[lhs]).first[axis];
+        auto rhs_val = bounder(elements[rhs]).first[axis];
+
+        return lhs_val < rhs_val;
       }
 
       size_t axis;
