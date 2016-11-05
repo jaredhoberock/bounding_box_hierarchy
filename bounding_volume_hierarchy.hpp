@@ -116,9 +116,9 @@ class bounding_volume_hierarchy
         }
         else
         {
-          hit_current_node = intersector(element(current_node), origin, direction, t);
+          bool current_result = intersector(element(current_node), origin, direction, t);
           
-          if(hit_current_node)
+          if(current_result)
           {
             // XXX this is where we'd evaluate hit_time()
             if(interval[0] <= t && t < interval[1])
