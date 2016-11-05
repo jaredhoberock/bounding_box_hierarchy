@@ -1,25 +1,24 @@
 #include "bounding_volume_hierarchy.hpp"
 #include <limits>
 
-template<typename PrimitiveType, typename RealType>
-const float bounding_volume_hierarchy<PrimitiveType,RealType>::EPS = 0.00005f;
+template<typename PrimitiveType>
+const float bounding_volume_hierarchy<PrimitiveType>::EPS = 0.00005f;
 
 
-template<typename PrimitiveType,
-         typename RealType>
+template<typename PrimitiveType>
   template<typename Bounder>
-    void bounding_volume_hierarchy<PrimitiveType, RealType>
+    void bounding_volume_hierarchy<PrimitiveType>
       ::findBounds(const std::vector<size_t>::iterator begin,
                    const std::vector<size_t>::iterator end,
                    const std::vector<Primitive> &primitives,
                    CachedBounder<Bounder> &bound,
                    point &min_corner, point &max_corner)
 {
-  Real inf = std::numeric_limits<Real>::infinity();
+  float inf = std::numeric_limits<float>::infinity();
   min_corner = point{ inf,  inf,  inf};
   max_corner = point{-inf, -inf, -inf};
 
-  Real x;
+  float x;
       
   for(std::vector<size_t>::iterator t = begin;
       t != end;
@@ -56,15 +55,14 @@ template<typename PrimitiveType,
 } // end bounding_volume_hierarchy::findBounds()
 
 
-template<typename PrimitiveType,
-         typename RealType>
-  size_t bounding_volume_hierarchy<PrimitiveType, RealType>
+template<typename PrimitiveType>
+  size_t bounding_volume_hierarchy<PrimitiveType>
     ::findPrincipalAxis(const point &min_corner,
                         const point &max_corner)
 {
   // find the principal axis of the points
   size_t axis = 4;
-  float maxLength = -std::numeric_limits<Real>::infinity();
+  float maxLength = -std::numeric_limits<float>::infinity();
   float temp;
   for(size_t i = 0; i < 3; ++i)
   {
@@ -80,10 +78,9 @@ template<typename PrimitiveType,
 } // end bounding_volume_hierarchy::findPrincipalAxis()
 
 
-template<typename PrimitiveType,
-         typename RealType>
+template<typename PrimitiveType>
   template<typename Bounder>
-    bounding_volume_hierarchy<PrimitiveType,RealType>::CachedBounder<Bounder>
+    bounding_volume_hierarchy<PrimitiveType>::CachedBounder<Bounder>
       ::CachedBounder(Bounder &bound,
                       const std::vector<Primitive> &primitives)
 {
