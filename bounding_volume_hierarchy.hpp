@@ -104,8 +104,6 @@ class bounding_volume_hierarchy
 
       const node* current_node = root_node();
 
-      auto t = interval[1];
-
       while(current_node != nullptr)
       {
         bool hit_current_node = false;
@@ -116,17 +114,15 @@ class bounding_volume_hierarchy
         }
         else
         {
-          bool current_result = intersector(element(current_node), origin, direction, t);
+          auto current_result = intersector(element(current_node), origin, direction, interval);
           
           if(current_result)
           {
-            // XXX this is where we'd evaluate hit_time()
-            if(interval[0] <= t && t < interval[1])
-            {
-              // shorten interval
-              interval[1] = t;
-              result = t;
-            }
+            // shorten interval
+            interval[1] = *current_result;
+
+            // update result
+            result = current_result;
           }
         }
 
