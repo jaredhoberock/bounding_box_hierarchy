@@ -22,6 +22,7 @@ class bounding_volume_hierarchy
   public:
     using element_type = T;
 
+    // XXX Bounder should take const T& and return pair<Point,Point>
     template<class ContiguousRange, class Bounder>
     bounding_volume_hierarchy(const ContiguousRange& primitives, Bounder& bound, float epsilon = std::numeric_limits<float>::epsilon())
       : primitives_(&*primitives.begin()), nodes_(make_tree(primitives, bound, epsilon))
@@ -83,42 +84,56 @@ class bounding_volume_hierarchy
     }
 
 
-    /*! The idea of this class is to wrap Bounder
-     *  and accelerate build() by caching the results
-     *  of Bounder.
-     *
-     *  This gives about a 10x build speedup on the bunny
-     *  in Cornell box scene.
-     */
     template<typename Bounder>
-      class CachedBounder
+    class memoized_bounder
     {
       public:
-        inline CachedBounder(Bounder &bound,
-                             const std::vector<T> &primitives);
+        memoized_bounder(Bounder &bound, const std::vector<T> &primitives)
+        {
+          mPrimMinBounds[0].resize(primitives.size());
+          mPrimMinBounds[1].resize(primitives.size());
+          mPrimMinBounds[2].resize(primitives.size());
 
-        inline float operator()(const size_t axis,
-                                const bool min,
-                                const size_t primIndex)
+          mPrimMaxBounds[0].resize(primitives.size());
+          mPrimMaxBounds[1].resize(primitives.size());
+          mPrimMaxBounds[2].resize(primitives.size());
+
+          size_t i = 0;
+          for(typename std::vector<T>::const_iterator prim = primitives.begin();
+              prim != primitives.end();
+              ++prim, ++i)
+          {
+            mPrimMinBounds[0][i] = bound(0, true, *prim);
+            mPrimMinBounds[1][i] = bound(1, true, *prim);
+            mPrimMinBounds[2][i] = bound(2, true, *prim);
+
+            mPrimMaxBounds[0][i] = bound(0, false, *prim);
+            mPrimMaxBounds[1][i] = bound(1, false, *prim);
+            mPrimMaxBounds[2][i] = bound(2, false, *prim);
+          }
+        }
+
+        float operator()(const size_t axis, const bool min, const size_t element_idx)
         {
           if(min)
           {
-            return mPrimMinBounds[axis][primIndex];
+            return mPrimMinBounds[axis][element_idx];
           }
 
-          return mPrimMaxBounds[axis][primIndex];
-        } // end operator()()
+          return mPrimMaxBounds[axis][element_idx];
+        }
 
       protected:
         std::vector<float> mPrimMinBounds[3];
         std::vector<float> mPrimMaxBounds[3];
-    }; // end CachedBounder
+    };
+
 
     template<typename Bounder>
     static std::pair<point,point> bounding_box(const std::vector<size_t>::iterator begin,
                                                const std::vector<size_t>::iterator end,
                                                const std::vector<T> &primitives,
-                                               CachedBounder<Bounder> &bound,
+                                               memoized_bounder<Bounder> &bound,
                                                float epsilon)
     {
       float inf = std::numeric_limits<float>::infinity();
@@ -167,7 +182,7 @@ class bounding_volume_hierarchy
     template<typename Bounder>
       struct PrimitiveSorter
     {
-      inline PrimitiveSorter(const size_t axis,
+      PrimitiveSorter(const size_t axis,
                              const std::vector<T> &primitives,
                              Bounder &bound)
         :mAxis(axis),mPrimitives(primitives),mBound(bound)
@@ -175,7 +190,7 @@ class bounding_volume_hierarchy
         ;
       } // end PrimitiveSorter()
 
-      inline bool operator()(const size_t lhs, const size_t rhs) const
+      bool operator()(const size_t lhs, const size_t rhs) const
       {
         return mBound(mAxis, true, lhs) < mBound(mAxis, true, rhs);
       } // end operator<()
@@ -290,8 +305,8 @@ class bounding_volume_hierarchy
       // create the leaves first so that they come first in the array
       tree.resize(primitives.size());
     
-      // create a CachedBounder
-      CachedBounder<Bounder> cachedBound(bound,primitives);
+      // memoize the bound function
+      memoized_bounder<Bounder> memoized_bound(bound,primitives);
     
       // recurse
       make_tree_recursive(tree,
@@ -300,7 +315,7 @@ class bounding_volume_hierarchy
                           indices.begin(),
                           indices.end(),
                           primitives,
-                          cachedBound,
+                          memoized_bound,
                           epsilon);
     
       assert(tree.size() == 2 * primitives.size() - 1);
