@@ -108,8 +108,6 @@ class bounding_volume_hierarchy
     struct memoized_bounder
     {
       using bounding_box_type = std::result_of_t<Bounder(const T&)>;
-      using min_corner_type = std::tuple_element_t<0,bounding_box_type>;
-      using max_corner_type = std::tuple_element_t<1,bounding_box_type>;
 
       // avoid copying this thing unintentionally
       memoized_bounder(memoized_bounder&&) = delete;
@@ -118,45 +116,18 @@ class bounding_volume_hierarchy
       memoized_bounder(const ContiguousRange& elements, Bounder bounder)
         : elements_(&*elements.begin())
       {
-        min_corners.resize(elements.size());
-        max_corners.resize(elements.size());
-
-        size_t i = 0;
-        for(auto element = elements.begin(); element != elements.end(); ++element, ++i)
-        {
-          // XXX need to just call bounder once and destructure the result with tie()
-          min_corners[i][0] = bounder(*element, 0, true);
-          min_corners[i][1] = bounder(*element, 1, true);
-          min_corners[i][2] = bounder(*element, 2, true);
-
-          max_corners[i][0] = bounder(*element, 0, false);
-          max_corners[i][1] = bounder(*element, 1, false);
-          max_corners[i][2] = bounder(*element, 2, false);
-        }
-      }
-
-      // XXX operator()() needs to be:
-      // result_of_t<Bounder(T)> operator()(const T& element) const
-
-      float operator()(const size_t axis, const bool min, size_t element_idx)
-      {
-        if(min)
-        {
-          return min_corners[element_idx][axis];
-        }
-
-        return max_corners[element_idx][axis];
+        bounding_boxes_.reserve(elements.size());
+        std::transform(elements.begin(), elements.end(), std::back_inserter(bounding_boxes_), bounder);
       }
 
       bounding_box_type operator()(const T& element) const
       {
         size_t element_idx = &element - elements_;
-        return bounding_box_type{min_corners[element_idx], max_corners[element_idx]};
+        return bounding_boxes_[element_idx];
       }
 
       const T* elements_;
-      std::vector<min_corner_type> min_corners;
-      std::vector<max_corner_type> max_corners;
+      std::vector<bounding_box_type> bounding_boxes_;
     };
 
 
