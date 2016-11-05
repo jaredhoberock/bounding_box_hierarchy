@@ -97,28 +97,40 @@ class bounding_volume_hierarchy
     {
       Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
 
-      const node* current_node = root_node();
-      bool hit = false;
       bool result = false;
+
+      const node* current_node = root_node();
+
       auto t = interval[1];
+
       while(current_node != nullptr)
       {
+        bool hit_current_node = false;
+
         if(!is_leaf(current_node))
         {
-          hit = intersect_box(origin, one_over_direction, current_node->bounding_box_, interval);
+          hit_current_node = intersect_box(origin, one_over_direction, current_node->bounding_box_, interval);
         }
         else
         {
           // the index of the element corresponding to the leaf node is the same as the leaf node's index
           size_t element_idx = current_node - nodes_.data();
 
-          hit = intersector(elements_[element_idx], origin, direction, t) && interval[0] < t && t < interval[1];
-          result |= hit;
-          if(hit)
-            interval[1] = std::min(t, interval[1]);
+          hit_current_node = intersector(elements_[element_idx], origin, direction, t);
+          
+          if(hit_current_node)
+          {
+            // XXX this is where we'd evaluate hit_time()
+            if(interval[0] <= t && t < interval[1])
+            {
+              // shorten interval
+              interval[1] = t;
+              result = true;
+            }
+          }
         }
 
-        current_node = hit ? current_node->hit_node_ : current_node->miss_node_;
+        current_node = hit_current_node ? current_node->hit_node_ : current_node->miss_node_;
       }
 
       return result;
