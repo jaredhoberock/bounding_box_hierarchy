@@ -116,7 +116,10 @@ std::vector<triangle> random_triangles_in_unit_cube(size_t n, int seed = 0)
 }
 
 
-std::vector<std::pair<point,vector>> random_rays_in_unit_cube(size_t n, int seed = 13)
+using ray = std::pair<point,vector>;
+
+
+std::vector<ray> random_rays_in_unit_cube(size_t n, int seed = 13)
 {
   std::default_random_engine rng(seed);
   std::uniform_real_distribution<float> unit_interval(0,1);
@@ -140,27 +143,22 @@ std::vector<std::pair<point,vector>> random_rays_in_unit_cube(size_t n, int seed
 }
 
 
-void test_bvh(size_t num_triangles, size_t num_rays, size_t seed = 0)
+template<class Hierarchy>
+bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 {
-  // generate some random triangles
-  auto triangles = random_triangles_in_unit_cube(num_triangles, seed);
-
-  // generate some random rays
-  auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
+  // build hierarchy
+  Hierarchy hierarchy(triangles);
 
   using intersection_type = std::pair<const triangle*,float>;
-
-  // build bvh
-  bounding_volume_hierarchy<triangle> bvh(triangles);
 
   // intersect against bvh
-  std::vector<intersection_type> bvh_intersections;
+  std::vector<intersection_type> intersections;
   for(int i = 0; i < rays.size(); ++i)
   {
     auto& ray = rays[i];
 
     // use a custom intersection functor to return a pointer to the triangle and the hit time
-    auto intersection = bvh.intersect(ray.first, ray.second, {0,1}, [](const auto& tri, const auto& o, const auto& d, const auto& i)
+    auto intersection = hierarchy.intersect(ray.first, ray.second, {0,1}, [](const auto& tri, const auto& o, const auto& d, const auto& i)
     {
       std::experimental::optional<float> intermediate_result = tri.intersect(o,d,i);
 
@@ -180,11 +178,11 @@ void test_bvh(size_t num_triangles, size_t num_rays, size_t seed = 0)
 
     if(intersection)
     {
-      bvh_intersections.push_back(*intersection);
+      intersections.push_back(*intersection);
     }
   }
 
-  std::vector<intersection_type> reference;
+  std::vector<intersection_type> reference_intersections;
   for(int i = 0; i < rays.size(); ++i)
   {
     auto& ray = rays[i];
@@ -206,104 +204,16 @@ void test_bvh(size_t num_triangles, size_t num_rays, size_t seed = 0)
 
     if(nearest_intersection)
     {
-      reference.push_back(*nearest_intersection);
+      reference_intersections.push_back(*nearest_intersection);
     }
   }
 
-  if(bvh_intersections != reference)
-  {
-    std::cerr << "bvh_intersections.size(): " << bvh_intersections.size() << std::endl;
-    std::cerr << "reference.size(): " << reference.size() << std::endl;
-  }
-
-  assert(bvh_intersections == reference);
-}
-
-
-void test_bbh(size_t num_triangles, size_t num_rays, size_t seed = 0)
-{
-  // generate some random triangles
-  auto triangles = random_triangles_in_unit_cube(num_triangles, seed);
-
-  // generate some random rays
-  auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
-
-  using intersection_type = std::pair<const triangle*,float>;
-
-  // build bbh
-  bounding_box_hierarchy<triangle> bbh(triangles);
-
-  // intersect against bbh
-  std::vector<intersection_type> bbh_intersections;
-  for(int i = 0; i < rays.size(); ++i)
-  {
-    auto& ray = rays[i];
-
-    // use a custom intersection functor to return a pointer to the triangle and the hit time
-    auto intersection = bbh.intersect(ray.first, ray.second, {0,1}, [](const auto& tri, const auto& o, const auto& d, const auto& i)
-    {
-      std::experimental::optional<float> intermediate_result = tri.intersect(o,d,i);
-
-      if(intermediate_result)
-      {
-        auto result = intersection_type(&tri, *intermediate_result);
-        return std::experimental::make_optional(result);
-      }
-
-      return std::experimental::optional<intersection_type>();
-    },
-    [](const intersection_type& result)
-    {
-      // the hit time is the intersection's second half
-      return result.second;
-    });
-
-    if(intersection)
-    {
-      bbh_intersections.push_back(*intersection);
-    }
-  }
-
-  std::vector<intersection_type> reference;
-  for(int i = 0; i < rays.size(); ++i)
-  {
-    auto& ray = rays[i];
-
-    std::experimental::optional<intersection_type> nearest_intersection;
-
-    for(const auto& tri : triangles)
-    {
-      std::experimental::optional<float> current_intersection = tri.intersect(ray.first, ray.second, {0,1});
-
-      if(current_intersection)
-      {
-        if(!nearest_intersection || *current_intersection < nearest_intersection->second)
-        {
-          nearest_intersection = intersection_type(&tri,*current_intersection);
-        }
-      }
-    }
-
-    if(nearest_intersection)
-    {
-      reference.push_back(*nearest_intersection);
-    }
-  }
-
-  if(bbh_intersections != reference)
-  {
-    std::cerr << "bbh_intersections.size(): " << bbh_intersections.size() << std::endl;
-    std::cerr << "reference.size(): " << reference.size() << std::endl;
-  }
-
-  assert(bbh_intersections == reference);
+  return intersections == reference_intersections;
 }
 
 
 int main()
 {
-  std::cout << "testing bounding_volume_hierarchy" << std::endl;
-
   for(size_t i = 0; i < 20; ++i)
   {
     std::mt19937 rng(i);
@@ -312,29 +222,14 @@ int main()
     int m = dist(rng);
     int n = dist(rng);
 
-    std::cout << "testing " << m << " " << n << std::endl;
-
-    test_bvh(m, n, rng());
-  }
-
-  std::cout << std::endl;
-
-  std::cout << "testing bounding_box_hierarchy" << std::endl;
-
-  for(size_t i = 0; i < 20; ++i)
-  {
-    std::mt19937 rng(i);
-    std::uniform_int_distribution<> dist(500, 1000);
-
-    int m = dist(rng);
-    int n = dist(rng);
+    auto triangles = random_triangles_in_unit_cube(dist(rng), rng());
+    auto rays = random_rays_in_unit_cube(dist(rng), rng());
 
     std::cout << "testing " << m << " " << n << std::endl;
 
-    test_bvh(m, n, rng());
+    assert(test<bounding_volume_hierarchy<triangle>>(triangles, rays));
+    assert(test<bounding_box_hierarchy<triangle>>(triangles, rays));
   }
-
-  std::cout << std::endl;
 
   std::cout << "OK" << std::endl;
 
