@@ -59,7 +59,7 @@ struct intersect_triangle
 {
   const std::vector<triangle>& triangles;
 
-  bool operator()(const point& origin, const point& direction, int idx, float& t) const
+  bool operator()(int idx, const point& origin, const point& direction, float& t) const
   {
     const triangle& tri = triangles[idx];
     const point& p0 = tri[0];
@@ -96,6 +96,11 @@ struct intersect_triangle
     t = inv_divisor * dot(e2,s2);
 
     return true;
+  }
+
+  bool operator()(const point& origin, const point& direction, int idx, float& t) const
+  {
+    return operator()(idx, origin, direction, t);
   }
 };
 
@@ -173,7 +178,7 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
     auto& ray = rays[i];
 
     intersect_triangle intersector{triangles};
-    if(new_bvh.intersect(ray.first, ray.second, 0.f, 1.f, intersector))
+    if(new_bvh.intersect(ray.first, ray.second, intersector))
     {
       new_intersections.push_back(i);
     }
