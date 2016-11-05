@@ -216,12 +216,10 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 template<class Hierarchy>
 double measure_performance(const Hierarchy& hierarchy, const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 {
-  std::vector<float> results(rays.size());
-
   // warm up
   for(int i = 0; i < rays.size(); ++i)
   {
-    results[i] = hierarchy.intersect(rays[i].first, rays[i].second).value_or(-0.f);
+    hierarchy.intersect(rays[i].first, rays[i].second);
   }
 
   size_t num_trials = 20;
@@ -232,7 +230,7 @@ double measure_performance(const Hierarchy& hierarchy, const std::vector<triangl
   {
     for(int i = 0; i < rays.size(); ++i)
     {
-      results[i] = hierarchy.intersect(rays[i].first, rays[i].second).value_or(-0.f);
+      hierarchy.intersect(rays[i].first, rays[i].second);
     }
   }
 
@@ -262,7 +260,7 @@ int main()
     assert(test<bounding_box_hierarchy<triangle>>(triangles, rays));
   }
 
-  size_t num_triangles = 1 << 10;
+  size_t num_triangles = 100000;
   size_t num_rays = 1 << 10;
 
   std::mt19937 rng;
@@ -271,9 +269,13 @@ int main()
 
   std::cout << "timing bounding box hierarchy: " << std::endl;
   bounding_box_hierarchy<triangle> bbh(triangles);
-  auto rays_per_second = measure_performance(bbh, triangles, rays);
+  auto bbh_rays_per_second = measure_performance(bbh, triangles, rays);
+  std::cout << "bounding_box_hierarchy: " << bbh_rays_per_second << " rays/s" << std::endl;
 
-  std::cout << "bounding_box_hierarchy: " << rays_per_second << " rays/s" << std::endl;
+  std::cout << "timing bounding volume hierarchy: " << std::endl;
+  bounding_volume_hierarchy<triangle> bvh(triangles);
+  auto bvh_rays_per_second = measure_performance(bvh, triangles, rays);
+  std::cout << "bounding_volume_hierarchy: " << bvh_rays_per_second << " rays/s" << std::endl;
 
   std::cout << "OK" << std::endl;
 
