@@ -40,8 +40,8 @@ class bounding_volume_hierarchy
     //
     // XXX bounder should come after epsilon? to match the parameter order of similar parameters of intersect()?
     template<class ContiguousRange, class Bounder>
-    bounding_volume_hierarchy(const ContiguousRange& elements, Bounder bound, float epsilon = std::numeric_limits<float>::epsilon())
-      : elements_(&*elements.begin()), nodes_(make_tree(elements, bound, epsilon))
+    bounding_volume_hierarchy(const ContiguousRange& elements, Bounder bounder, float epsilon = std::numeric_limits<float>::epsilon())
+      : elements_(&*elements.begin()), nodes_(make_tree(elements, bounder, epsilon))
     {}
 
     auto bounding_box() const
@@ -111,8 +111,11 @@ class bounding_volume_hierarchy
       using min_corner_type = std::tuple_element_t<0,pair_of_points>;
       using max_corner_type = std::tuple_element_t<1,pair_of_points>;
 
+      // avoid copying this thing unintentionally
+      memoized_bounder(memoized_bounder&&) = delete;
+
       template<class ContiguousRange>
-      memoized_bounder(const ContiguousRange& elements, Bounder bounding_box)
+      memoized_bounder(const ContiguousRange& elements, Bounder bounder)
         : elements_(&*elements.begin())
       {
         min_corners.resize(elements.size());
@@ -121,14 +124,14 @@ class bounding_volume_hierarchy
         size_t i = 0;
         for(auto element = elements.begin(); element != elements.end(); ++element, ++i)
         {
-          // XXX need to just call bounding box once and destructure the result with tie()
-          min_corners[i][0] = bounding_box(*element, 0, true);
-          min_corners[i][1] = bounding_box(*element, 1, true);
-          min_corners[i][2] = bounding_box(*element, 2, true);
+          // XXX need to just call bounder once and destructure the result with tie()
+          min_corners[i][0] = bounder(*element, 0, true);
+          min_corners[i][1] = bounder(*element, 1, true);
+          min_corners[i][2] = bounder(*element, 2, true);
 
-          max_corners[i][0] = bounding_box(*element, 0, false);
-          max_corners[i][1] = bounding_box(*element, 1, false);
-          max_corners[i][2] = bounding_box(*element, 2, false);
+          max_corners[i][0] = bounder(*element, 0, false);
+          max_corners[i][1] = bounder(*element, 1, false);
+          max_corners[i][2] = bounder(*element, 2, false);
         }
       }
 
@@ -202,20 +205,20 @@ class bounding_volume_hierarchy
       template<class ContiguousRange>
       element_sorter(const size_t axis_,
                      const ContiguousRange& elements_,
-                     Bounder &bound_)
-        :axis(axis_),elements(&*elements_.begin()),bound(bound_)
+                     Bounder &bounder_)
+        :axis(axis_),elements(&*elements_.begin()),bounder(bounder_)
       {
         ;
       }
 
       bool operator()(const size_t lhs, const size_t rhs) const
       {
-        return bound(axis, true, lhs) < bound(axis, true, rhs);
+        return bounder(axis, true, lhs) < bounder(axis, true, rhs);
       }
 
       size_t axis;
       const T* elements;
-      Bounder &bound;
+      Bounder& bounder; // XXX make this a value
     };
 
 
@@ -269,7 +272,7 @@ class bounding_volume_hierarchy
                                            std::vector<size_t>::iterator begin,
                                            std::vector<size_t>::iterator end,
                                            const ContiguousRange &elements,
-                                           Bounder &bound,
+                                           Bounder& bounder,
                                            float epsilon)
     {
       if(begin + 1 == end)
@@ -286,12 +289,12 @@ class bounding_volume_hierarchy
       else
       {
         // find the bounds of the elements
-        std::pair<point,point> bounds = bounding_box(begin, end, elements, bound, epsilon);
+        std::pair<point,point> bounds = bounding_box(begin, end, elements, bounder, epsilon);
 
         size_t axis = findPrincipalAxis(bounds.first, bounds.second);
 
         // create an ordering
-        element_sorter<Bounder> sorter(axis,elements,bound);
+        element_sorter<Bounder> sorter(axis,elements,bounder);
         
         // sort the median
         std::vector<size_t>::iterator split = begin + (end - begin) / 2;
@@ -299,10 +302,10 @@ class bounding_volume_hierarchy
         std::nth_element(begin, split, end, sorter);
 
         // build the right subtree first
-        const node* right_child = make_tree_recursive(tree, miss_node, nullptr, split, end, elements, bound, epsilon);
+        const node* right_child = make_tree_recursive(tree, miss_node, nullptr, split, end, elements, bounder, epsilon);
 
         // we have to pass the right child to the left subtree build
-        const node* left_child = make_tree_recursive(tree, right_child, right_child, begin, split, elements, bound, epsilon);
+        const node* left_child = make_tree_recursive(tree, right_child, right_child, begin, split, elements, bounder, epsilon);
 
         // create a new node
         tree.emplace_back(left_child, miss_node, bounds.first, bounds.second);
@@ -312,7 +315,7 @@ class bounding_volume_hierarchy
 
 
     template<class ContiguousRange, class Bounder>
-    static std::vector<node> make_tree(const ContiguousRange &elements, Bounder bound, float epsilon)
+    static std::vector<node> make_tree(const ContiguousRange &elements, Bounder bounder, float epsilon)
     {
       // we will sort an array of indices
       std::vector<size_t> indices(elements.size());
@@ -326,7 +329,7 @@ class bounding_volume_hierarchy
       tree.resize(elements.size());
     
       // memoize the bound function
-      memoized_bounder<Bounder> memoized_bound(elements,bound);
+      memoized_bounder<Bounder> memoized_bounder(elements,bounder);
     
       // recurse
       make_tree_recursive(tree,
@@ -335,7 +338,7 @@ class bounding_volume_hierarchy
                           indices.begin(),
                           indices.end(),
                           elements,
-                          memoized_bound,
+                          memoized_bounder,
                           epsilon);
     
       assert(tree.size() == 2 * elements.size() - 1);
