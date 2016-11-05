@@ -184,21 +184,17 @@ class bounding_volume_hierarchy
     }
 
 
-    template<typename Bounder>
+    template<class ContiguousRange, class Bounder>
     static bounding_box_type bounding_box(const std::vector<size_t>::iterator begin,
                                           const std::vector<size_t>::iterator end,
-                                          const std::vector<T> &elements,
+                                          const ContiguousRange& elements,
                                           Bounder bounder,
                                           float epsilon)
     {
       float inf = std::numeric_limits<float>::infinity();
       bounding_box_type result{{{inf, inf, inf}, {-inf, -inf, -inf}}};
-
-      float x;
           
-      for(std::vector<size_t>::iterator t = begin;
-          t != end;
-          ++t)
+      for(std::vector<size_t>::iterator t = begin; t != end; ++t)
       {
         auto bounding_box = bounder(elements[*t]);
 
