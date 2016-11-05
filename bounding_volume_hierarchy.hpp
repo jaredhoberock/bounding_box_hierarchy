@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
-#include <tuple>
+#include <tuple> // XXX eliminate this
 #include <type_traits>
 #include <cassert>
 
@@ -44,9 +44,9 @@ class bounding_volume_hierarchy
       : elements_(&*elements.begin()), nodes_(make_tree(elements, bounder, epsilon))
     {}
 
-    auto bounding_box() const
+    std::array<point,2> bounding_box() const
     {
-      return std::make_pair(root_node().min_corner_, root_node().max_corner_);
+      return {root_node().min_corner_, root_node().max_corner_};
     }
 
     template<class Point, class Vector, typename Interval = std::array<float,2>, class Function = call_member_intersect>
@@ -107,9 +107,9 @@ class bounding_volume_hierarchy
     template<class Bounder>
     struct memoized_bounder
     {
-      using pair_of_points = std::result_of_t<Bounder(const T&)>;
-      using min_corner_type = std::tuple_element_t<0,pair_of_points>;
-      using max_corner_type = std::tuple_element_t<1,pair_of_points>;
+      using bounding_box_type = std::result_of_t<Bounder(const T&)>;
+      using min_corner_type = std::tuple_element_t<0,bounding_box_type>;
+      using max_corner_type = std::tuple_element_t<1,bounding_box_type>;
 
       // avoid copying this thing unintentionally
       memoized_bounder(memoized_bounder&&) = delete;
@@ -148,10 +148,10 @@ class bounding_volume_hierarchy
         return max_corners[element_idx][axis];
       }
 
-      pair_of_points operator()(const T& element) const
+      bounding_box_type operator()(const T& element) const
       {
         size_t element_idx = &element - elements_;
-        return pair_of_points(min_corners[element_idx], max_corners[element_idx]);
+        return bounding_box_type{min_corners[element_idx], max_corners[element_idx]};
       }
 
       const T* elements_;
@@ -161,11 +161,11 @@ class bounding_volume_hierarchy
 
 
     template<typename Bounder>
-    static std::pair<point,point> bounding_box(const std::vector<size_t>::iterator begin,
-                                               const std::vector<size_t>::iterator end,
-                                               const std::vector<T> &elements,
-                                               memoized_bounder<Bounder>& bounder,
-                                               float epsilon)
+    static std::array<point,2> bounding_box(const std::vector<size_t>::iterator begin,
+                                            const std::vector<size_t>::iterator end,
+                                            const std::vector<T> &elements,
+                                            memoized_bounder<Bounder>& bounder,
+                                            float epsilon)
     {
       float inf = std::numeric_limits<float>::infinity();
       point min_corner{ inf,  inf,  inf};
@@ -196,7 +196,7 @@ class bounding_volume_hierarchy
         max_corner[i] += epsilon;
       }
 
-      return std::make_pair(min_corner, max_corner);
+      return {min_corner, max_corner};
     }
 
     template<typename Bounder>
@@ -213,9 +213,8 @@ class bounding_volume_hierarchy
 
       bool operator()(const size_t lhs, const size_t rhs) const
       {
-        // XXX let's not use pair at all and just use std::array consistently
-        auto lhs_val = bounder(elements[lhs]).first[axis];
-        auto rhs_val = bounder(elements[rhs]).first[axis];
+        auto lhs_val = bounder(elements[lhs])[0][axis];
+        auto rhs_val = bounder(elements[rhs])[0][axis];
 
         return lhs_val < rhs_val;
       }
@@ -293,17 +292,17 @@ class bounding_volume_hierarchy
       else
       {
         // find the bounds of the elements
-        std::pair<point,point> bounds = bounding_box(begin, end, elements, bounder, epsilon);
+        std::array<point,2> bounds = bounding_box(begin, end, elements, bounder, epsilon);
 
-        size_t axis = findPrincipalAxis(bounds.first, bounds.second);
+        size_t axis = findPrincipalAxis(bounds[0], bounds[1]);
 
         // create an ordering
-        sort_bounding_boxes_by_axis<Bounder> sorter(axis,elements,bounder);
+        sort_bounding_boxes_by_axis<Bounder> compare(axis,elements,bounder);
         
         // sort the median
         std::vector<size_t>::iterator split = begin + (end - begin) / 2;
 
-        std::nth_element(begin, split, end, sorter);
+        std::nth_element(begin, split, end, compare);
 
         // build the right subtree first
         const node* right_child = make_tree_recursive(tree, miss_node, nullptr, split, end, elements, bounder, epsilon);
@@ -312,7 +311,7 @@ class bounding_volume_hierarchy
         const node* left_child = make_tree_recursive(tree, right_child, right_child, begin, split, elements, bounder, epsilon);
 
         // create a new node
-        tree.emplace_back(left_child, miss_node, bounds.first, bounds.second);
+        tree.emplace_back(left_child, miss_node, bounds[0], bounds[1]);
         return &tree.back();
       }
     }

@@ -81,7 +81,7 @@ struct triangle : std::array<point,3>
     return true;
   }
 
-  std::pair<point,point> bounding_box() const
+  std::array<point,2> bounding_box() const
   {
     point min_corner;
 
@@ -95,7 +95,7 @@ struct triangle : std::array<point,3>
     max_corner[1] = std::max((*this)[0][1], std::max((*this)[1][1], (*this)[2][1]));
     max_corner[2] = std::max((*this)[0][2], std::max((*this)[1][2], (*this)[2][2]));
 
-    return std::make_pair(min_corner, max_corner);
+    return {min_corner, max_corner};
   }
 };
 
