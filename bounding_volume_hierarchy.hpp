@@ -103,6 +103,7 @@ class bounding_volume_hierarchy
     }
 
 
+    // XXX this should probably be external to this class
     template<class Bounder>
     struct memoized_bounder
     {
@@ -112,6 +113,7 @@ class bounding_volume_hierarchy
 
       template<class ContiguousRange>
       memoized_bounder(const ContiguousRange& elements, Bounder bounding_box)
+        : elements_(&*elements.begin())
       {
         min_corners.resize(elements.size());
         max_corners.resize(elements.size());
@@ -143,6 +145,13 @@ class bounding_volume_hierarchy
         return max_corners[element_idx][axis];
       }
 
+      pair_of_points operator()(const T& element) const
+      {
+        size_t element_idx = element - elements_;
+        return pair_of_points(min_corners[element_idx], max_corners[element_idx]);
+      }
+
+      const T* elements_;
       std::vector<min_corner_type> min_corners;
       std::vector<max_corner_type> max_corners;
     };
