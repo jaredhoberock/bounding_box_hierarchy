@@ -148,7 +148,7 @@ class bounding_volume_hierarchy
             interval[1] = hit_time(*current_result);
 
             // update result
-            result = current_result;
+            result = *current_result;
           }
         }
 
