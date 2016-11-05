@@ -30,6 +30,8 @@ class bounding_volume_hierarchy
       }
     };
 
+    // XXX instead of defining point privately
+    //     maybe define bounding_box_type publicly?
     using point = std::array<float,3>;
 
   public:
