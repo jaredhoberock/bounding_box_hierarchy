@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <iostream>
 
 #include "bounding_volume_hierarchy.hpp"
 
@@ -158,14 +159,14 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
   // generate some random rays
   auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
 
-  std::vector<int> new_intersections;
+  std::vector<int> bvh_intersections;
   for(int i = 0; i < rays.size(); ++i)
   {
     auto& ray = rays[i];
 
-    if(new_bvh.intersect(ray.first, ray.second))
+    if(bvh.intersect(ray.first, ray.second))
     {
-      new_intersections.push_back(i);
+      bvh_intersections.push_back(i);
     }
   }
 }
