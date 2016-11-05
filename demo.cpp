@@ -1,10 +1,12 @@
-#include "bounding_volume_hierarchy.hpp"
-#include "BoundingVolumeHierarchy.h"
 #include <array>
 #include <random>
 #include <vector>
 #include <algorithm>
 #include <numeric>
+
+#include "bounding_volume_hierarchy.hpp"
+#include "BoundingVolumeHierarchy.h"
+#include "optional.hpp"
 
 struct point : std::array<float,3>
 {
@@ -43,6 +45,45 @@ vector cross(const vector& lhs, const vector& rhs)
 
 struct triangle : std::array<point,3>
 {
+  std::experimental::optional<float> intersect(const point& origin, const point& direction, const std::array<float,2>& interval) const
+  {
+    const point& p0 = (*this)[0];
+    const point& p1 = (*this)[1];
+    const point& p2 = (*this)[2];
+
+    vector e1 = p1 - p0;
+    vector e2 = p2 - p0;
+    vector s1 = cross(direction,e2);
+    float divisor = dot(s1,e1);
+    if(divisor == 0.f)
+    {
+      return false;
+    }
+
+    float inv_divisor = 1.f / divisor;
+
+    // compute barycentric coordinates 
+    vector d = origin - p0;
+    float b0 = dot(d,s1) * inv_divisor;
+    if(b0 < 0.f || b0 > 1.f)
+    {
+      return false;
+    }
+
+    vector s2 = cross(d,e1);
+    float b1 = dot(direction, s2) * inv_divisor;
+    if(b1 < 0.f || b0 + b1 > 1.f)
+    {
+      return false;
+    }
+
+    // compute t
+    float t = inv_divisor * dot(e2,s2);
+
+    return (interval[0] <= t && t < interval[1]) ? std::experimental::make_optional(t) : std::experimental::nullopt;
+  }
+
+  // XXX eliminate this
   bool intersect(const point& origin, const point& direction, float& t) const
   {
     const point& p0 = (*this)[0];
@@ -124,7 +165,7 @@ struct triangle_bounding_box
 };
 
 
-struct intersect_triangle
+struct triangle_intersect
 {
   const std::vector<triangle>& triangles;
 
@@ -206,7 +247,7 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
   {
     auto& ray = rays[i];
 
-    intersect_triangle intersector{triangles};
+    triangle_intersect intersector{triangles};
     if(old_bvh.intersect(ray.first, ray.second, 0.f, 1.f, intersector))
     {
       old_intersections.push_back(i);
