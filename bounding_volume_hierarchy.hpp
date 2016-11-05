@@ -114,6 +114,7 @@ class bounding_volume_hierarchy
     /// \return The nearest result of `intersector` along the ray, if an intersection exists. Empty, otherwise.
     //
     // XXX maybe the default hit_time should be to call result_type::hit_time() if result_type is not convertible to float?
+    // XXX another default could be to call std::get<float>() in case the intersection type is tuple-like
     template<class Point, class Vector,
              class Interval = std::array<float,2>,
              class Function1 = call_member_intersect,
