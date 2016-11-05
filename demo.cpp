@@ -100,8 +100,13 @@ struct triangle : std::array<point,3>
 };
 
 
-struct bound_triangle
+struct triangle_bounding_box
 {
+  auto operator()(const triangle& tri) const
+  {
+    return tri.bounding_box();
+  }
+
   float operator()(const triangle& tri, int axis, bool min) const
   {
     if(min)
@@ -188,10 +193,10 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
 
   // build bvhs
   BoundingVolumeHierarchy<triangle, point> old_bvh;
-  bound_triangle bound;
+  triangle_bounding_box bound;
   old_bvh.build(triangles, bound);
 
-  bounding_volume_hierarchy<triangle> new_bvh(triangles, bound_triangle{});
+  bounding_volume_hierarchy<triangle> new_bvh(triangles, triangle_bounding_box{});
 
   // generate some random rays
   auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
