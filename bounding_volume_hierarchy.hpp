@@ -13,6 +13,8 @@ class bounding_volume_hierarchy
   public:
     using element_type = T;
 
+    // XXX should make this a parameter of the constructor
+    //     can default to numeric_limits<float>::epsilon()
     static const float EPS;
 
     // XXX should take a contiguous range instead of a vector
@@ -44,7 +46,7 @@ class bounding_volume_hierarchy
         }
         else
         {
-          // the index of the primitive contained inside the leaf node is the same as the leaf node's index
+          // the index of the primitive corresponding to the leaf node is the same as the leaf node's index
           size_t primitive_idx = current_node - nodes_.data();
 
           hit = intersector(primitives_[primitive_idx], origin, direction, t) && interval[0] < t && t < interval[1];
