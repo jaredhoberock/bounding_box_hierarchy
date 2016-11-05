@@ -2,60 +2,6 @@
 #include <limits>
 
 template<typename T>
-const float bounding_volume_hierarchy<T>::EPS = 0.00005f;
-
-
-template<typename T>
-  template<typename Bounder>
-    void bounding_volume_hierarchy<T>
-      ::findBounds(const std::vector<size_t>::iterator begin,
-                   const std::vector<size_t>::iterator end,
-                   const std::vector<T> &primitives,
-                   CachedBounder<Bounder> &bound,
-                   point &min_corner, point &max_corner)
-{
-  float inf = std::numeric_limits<float>::infinity();
-  min_corner = point{ inf,  inf,  inf};
-  max_corner = point{-inf, -inf, -inf};
-
-  float x;
-      
-  for(std::vector<size_t>::iterator t = begin;
-      t != end;
-      ++t)
-  {
-    for(size_t i =0;
-        i < 3;
-        ++i)
-    {
-      x = bound(i, true, *t);
-
-      if(x < min_corner[i])
-      {
-        min_corner[i] = x;
-      } // end if
-
-      x = bound(i, false, *t);
-
-      if(x > max_corner[i])
-      {
-        max_corner[i] = x;
-      } // end if
-    } // end for j
-  } // end for t
-
-  // always widen the bounding box
-  // this ensures that axis-aligned primitives always
-  // lie strictly within the bounding box
-  for(size_t i = 0; i != 3; ++i)
-  {
-    min_corner[i] -= EPS;
-    max_corner[i] += EPS;
-  } // end for i
-} // end bounding_volume_hierarchy::findBounds()
-
-
-template<typename T>
   size_t bounding_volume_hierarchy<T>
     ::findPrincipalAxis(const point &min_corner,
                         const point &max_corner)

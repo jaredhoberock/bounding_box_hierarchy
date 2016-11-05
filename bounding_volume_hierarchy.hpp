@@ -13,14 +13,10 @@ class bounding_volume_hierarchy
   public:
     using element_type = T;
 
-    // XXX should make this a parameter of the constructor
-    //     can default to numeric_limits<float>::epsilon()
-    static const float EPS;
-
     // XXX should take a contiguous range instead of a vector
     template<class Bounder>
-    bounding_volume_hierarchy(const std::vector<T>& primitives, Bounder& bound)
-      : primitives_(primitives.data()), nodes_(make_tree(primitives, bound))
+    bounding_volume_hierarchy(const std::vector<T>& primitives, Bounder& bound, float epsilon = std::numeric_limits<float>::epsilon())
+      : primitives_(primitives.data()), nodes_(make_tree(primitives, bound, epsilon))
     {}
 
     template<class Point, class Vector, class Function, typename Interval = std::array<float,2>>
@@ -123,11 +119,54 @@ class bounding_volume_hierarchy
     }; // end CachedBounder
 
     template<typename Bounder>
-      static void findBounds(const std::vector<size_t>::iterator begin,
-                             const std::vector<size_t>::iterator end,
-                             const std::vector<T> &primitives,
-                             CachedBounder<Bounder> &bound,
-                             point &m, point &M);
+    static std::pair<point,point> bounding_box(const std::vector<size_t>::iterator begin,
+                                               const std::vector<size_t>::iterator end,
+                                               const std::vector<T> &primitives,
+                                               CachedBounder<Bounder> &bound,
+                                               float epsilon)
+    {
+      float inf = std::numeric_limits<float>::infinity();
+      point min_corner{ inf,  inf,  inf};
+      point max_corner{-inf, -inf, -inf};
+
+      float x;
+          
+      for(std::vector<size_t>::iterator t = begin;
+          t != end;
+          ++t)
+      {
+        for(size_t i =0;
+            i < 3;
+            ++i)
+        {
+          x = bound(i, true, *t);
+
+          if(x < min_corner[i])
+          {
+            min_corner[i] = x;
+          }
+
+          x = bound(i, false, *t);
+
+          if(x > max_corner[i])
+          {
+            max_corner[i] = x;
+          }
+        }
+      }
+
+      // widen the bounding box by 2*epsilon
+      // XXX might want to instead ensure that each side is at least epsilon in width
+      // this ensures that axis-aligned primitives always
+      // lie strictly within the bounding box
+      for(size_t i = 0; i != 3; ++i)
+      {
+        min_corner[i] -= epsilon;
+        max_corner[i] += epsilon;
+      }
+
+      return std::make_pair(min_corner, max_corner);
+    }
 
     template<typename Bounder>
       struct PrimitiveSorter
@@ -199,7 +238,8 @@ class bounding_volume_hierarchy
                                            std::vector<size_t>::iterator begin,
                                            std::vector<size_t>::iterator end,
                                            const std::vector<T> &primitives,
-                                           Bounder &bound)
+                                           Bounder &bound,
+                                           float epsilon)
     {
       if(begin + 1 == end)
       {
@@ -215,10 +255,9 @@ class bounding_volume_hierarchy
       else
       {
         // find the bounds of the primitives
-        point min_corner, max_corner;
-        findBounds(begin, end, primitives, bound, min_corner, max_corner);
+        std::pair<point,point> bounds = bounding_box(begin, end, primitives, bound, epsilon);
 
-        size_t axis = findPrincipalAxis(min_corner, max_corner);
+        size_t axis = findPrincipalAxis(bounds.first, bounds.second);
 
         // create an ordering
         PrimitiveSorter<Bounder> sorter(axis,primitives,bound);
@@ -229,20 +268,20 @@ class bounding_volume_hierarchy
         std::nth_element(begin, split, end, sorter);
 
         // build the right subtree first
-        const node* right_child = make_tree_recursive(tree, miss_node, nullptr, split, end, primitives, bound);
+        const node* right_child = make_tree_recursive(tree, miss_node, nullptr, split, end, primitives, bound, epsilon);
 
         // we have to pass the right child to the left subtree build
-        const node* left_child = make_tree_recursive(tree, right_child, right_child, begin, split, primitives, bound);
+        const node* left_child = make_tree_recursive(tree, right_child, right_child, begin, split, primitives, bound, epsilon);
 
         // create a new node
-        tree.emplace_back(left_child, miss_node, min_corner, max_corner);
+        tree.emplace_back(left_child, miss_node, bounds.first, bounds.second);
         return &tree.back();
       }
     }
 
 
     template<typename Bounder>
-    static std::vector<node> make_tree(const std::vector<T> &primitives, Bounder &bound)
+    static std::vector<node> make_tree(const std::vector<T> &primitives, Bounder &bound, float epsilon)
     {
       // we will sort an array of indices
       std::vector<size_t> indices(primitives.size());
@@ -265,7 +304,8 @@ class bounding_volume_hierarchy
                           indices.begin(),
                           indices.end(),
                           primitives,
-                          cachedBound);
+                          cachedBound,
+                          epsilon);
     
       assert(tree.size() == 2 * primitives.size() - 1);
 
