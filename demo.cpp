@@ -169,6 +169,29 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
       bvh_intersections.push_back(i);
     }
   }
+
+  std::vector<int> reference;
+  for(int i = 0; i < rays.size(); ++i)
+  {
+    auto& ray = rays[i];
+
+    for(const auto& tri : triangles)
+    {
+      if(tri.intersect(ray.first, ray.second, {0,1}))
+      {
+        reference.push_back(i);
+        break;
+      }
+    }
+  }
+
+  if(bvh_intersections != reference)
+  {
+    std::cerr << "bvh_intersections.size(): " << bvh_intersections.size() << std::endl;
+    std::cerr << "reference.size(): " << reference.size() << std::endl;
+  }
+
+  assert(bvh_intersections == reference);
 }
 
 
