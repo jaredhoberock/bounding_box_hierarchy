@@ -4,6 +4,7 @@
 #include <array>
 #include <algorithm>
 #include <numeric>
+#include <utility>
 #include <cassert>
 
 template<typename T>
@@ -27,6 +28,8 @@ class bounding_volume_hierarchy
       }
     };
 
+    using point = std::array<float,3>;
+
   public:
     using element_type = T;
 
@@ -38,6 +41,11 @@ class bounding_volume_hierarchy
     bounding_volume_hierarchy(const ContiguousRange& elements, Bounder& bound, float epsilon = std::numeric_limits<float>::epsilon())
       : elements_(&*elements.begin()), nodes_(make_tree(elements, bound, epsilon))
     {}
+
+    auto bounding_box() const
+    {
+      return std::make_pair(root_node().min_corner_, root_node().max_corner_);
+    }
 
     template<class Point, class Vector, typename Interval = std::array<float,2>, class Function = call_member_intersect>
     bool intersect(Point origin, Vector direction, Interval interval = Interval{0.f, 1.f}, Function intersector = call_member_intersect()) const
@@ -72,8 +80,6 @@ class bounding_volume_hierarchy
     }
 
   private:
-    using point = std::array<float,3>;
-
     template<class Point, class Vector, class Interval>
     static bool intersect_box(Point origin, Vector one_over_direction, const point &min_corner, const point &max_corner, Interval interval)
     {
