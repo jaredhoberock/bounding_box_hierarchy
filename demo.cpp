@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "bounding_volume_hierarchy.hpp"
+#include "bounding_box_hierarchy.hpp"
 
 using point = std::array<float,3>;
 
@@ -139,19 +140,20 @@ std::vector<std::pair<point,vector>> random_rays_in_unit_cube(size_t n, int seed
 }
 
 
-void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
+void test_bvh(size_t num_triangles, size_t num_rays, size_t seed = 0)
 {
   // generate some random triangles
   auto triangles = random_triangles_in_unit_cube(num_triangles, seed);
-
-  // build bvh
-  bounding_volume_hierarchy<triangle> bvh(triangles);
 
   // generate some random rays
   auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
 
   using intersection_type = std::pair<const triangle*,float>;
 
+  // build bvh
+  bounding_volume_hierarchy<triangle> bvh(triangles);
+
+  // intersect against bvh
   std::vector<intersection_type> bvh_intersections;
   for(int i = 0; i < rays.size(); ++i)
   {
@@ -218,8 +220,90 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
 }
 
 
+void test_bbh(size_t num_triangles, size_t num_rays, size_t seed = 0)
+{
+  // generate some random triangles
+  auto triangles = random_triangles_in_unit_cube(num_triangles, seed);
+
+  // generate some random rays
+  auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
+
+  using intersection_type = std::pair<const triangle*,float>;
+
+  // build bbh
+  bounding_box_hierarchy<triangle> bbh(triangles);
+
+  // intersect against bbh
+  std::vector<intersection_type> bbh_intersections;
+  for(int i = 0; i < rays.size(); ++i)
+  {
+    auto& ray = rays[i];
+
+    // use a custom intersection functor to return a pointer to the triangle and the hit time
+    auto intersection = bbh.intersect(ray.first, ray.second, {0,1}, [](const auto& tri, const auto& o, const auto& d, const auto& i)
+    {
+      std::experimental::optional<float> intermediate_result = tri.intersect(o,d,i);
+
+      if(intermediate_result)
+      {
+        auto result = intersection_type(&tri, *intermediate_result);
+        return std::experimental::make_optional(result);
+      }
+
+      return std::experimental::optional<intersection_type>();
+    },
+    [](const intersection_type& result)
+    {
+      // the hit time is the intersection's second half
+      return result.second;
+    });
+
+    if(intersection)
+    {
+      bbh_intersections.push_back(*intersection);
+    }
+  }
+
+  std::vector<intersection_type> reference;
+  for(int i = 0; i < rays.size(); ++i)
+  {
+    auto& ray = rays[i];
+
+    std::experimental::optional<intersection_type> nearest_intersection;
+
+    for(const auto& tri : triangles)
+    {
+      std::experimental::optional<float> current_intersection = tri.intersect(ray.first, ray.second, {0,1});
+
+      if(current_intersection)
+      {
+        if(!nearest_intersection || *current_intersection < nearest_intersection->second)
+        {
+          nearest_intersection = intersection_type(&tri,*current_intersection);
+        }
+      }
+    }
+
+    if(nearest_intersection)
+    {
+      reference.push_back(*nearest_intersection);
+    }
+  }
+
+  if(bbh_intersections != reference)
+  {
+    std::cerr << "bbh_intersections.size(): " << bbh_intersections.size() << std::endl;
+    std::cerr << "reference.size(): " << reference.size() << std::endl;
+  }
+
+  assert(bbh_intersections == reference);
+}
+
+
 int main()
 {
+  std::cout << "testing bounding_volume_hierarchy" << std::endl;
+
   for(size_t i = 0; i < 20; ++i)
   {
     std::mt19937 rng(i);
@@ -230,7 +314,24 @@ int main()
 
     std::cout << "testing " << m << " " << n << std::endl;
 
-    test(m, n, rng());
+    test_bvh(m, n, rng());
+  }
+
+  std::cout << std::endl;
+
+  std::cout << "testing bounding_box_hierarchy" << std::endl;
+
+  for(size_t i = 0; i < 20; ++i)
+  {
+    std::mt19937 rng(i);
+    std::uniform_int_distribution<> dist(500, 1000);
+
+    int m = dist(rng);
+    int n = dist(rng);
+
+    std::cout << "testing " << m << " " << n << std::endl;
+
+    test_bvh(m, n, rng());
   }
 
   std::cout << "OK" << std::endl;
