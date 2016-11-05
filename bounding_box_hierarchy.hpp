@@ -5,6 +5,9 @@
 #include <stack>
 #include <numeric>
 
+#include "memoized_bounder.hpp"
+#include "optional.hpp"
+
 
 template<class T>
 class bounding_box_hierarchy

@@ -334,6 +334,8 @@ int main()
     test_bvh(m, n, rng());
   }
 
+  std::cout << std::endl;
+
   std::cout << "OK" << std::endl;
 
   return 0;
