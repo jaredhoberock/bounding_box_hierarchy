@@ -86,7 +86,7 @@ class bounding_volume_hierarchy
 
     bounding_box_type bounding_box() const
     {
-      return {root_node().min_corner_, root_node().max_corner_};
+      return bounding_box(root_node());
     }
 
 
@@ -112,7 +112,7 @@ class bounding_volume_hierarchy
 
         if(!is_leaf(current_node))
         {
-          hit_current_node = intersect_box(origin, one_over_direction, current_node->bounding_box_, interval);
+          hit_current_node = intersect_box(bounding_box(current_node), origin, one_over_direction, interval);
         }
         else
         {
@@ -139,9 +139,9 @@ class bounding_volume_hierarchy
 
   private:
     template<class Point, class Vector, class Interval>
-    static bool intersect_box(Point origin,
+    static bool intersect_box(const bounding_box_type& box,
+                              Point origin,
                               Vector one_over_direction,
-                              const bounding_box_type& box,
                               Interval interval)
     {
       Point t_min3, t_max3;
@@ -362,6 +362,11 @@ class bounding_volume_hierarchy
       // the index of the element corresponding to the leaf node is the same as the leaf node's index
       size_t element_idx = leaf - nodes_.data();
       return elements_[element_idx];
+    }
+
+    const bounding_box_type& bounding_box(const node* n) const
+    {
+      return n->bounding_box_;
     }
 
 
