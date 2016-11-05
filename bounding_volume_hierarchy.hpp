@@ -7,17 +7,17 @@
 #include <numeric>
 #include <cassert>
 
-template<typename PrimitiveType>
-  class bounding_volume_hierarchy
+template<typename T>
+class bounding_volume_hierarchy
 {
   public:
-    typedef PrimitiveType Primitive;
+    using element_type = T;
 
     static const float EPS;
 
-    // XXX should take a contiguous range of primitives instead of a vector
+    // XXX should take a contiguous range instead of a vector
     template<class Bounder>
-    bounding_volume_hierarchy(const std::vector<Primitive>& primitives, Bounder& bound)
+    bounding_volume_hierarchy(const std::vector<T>& primitives, Bounder& bound)
       : primitives_(primitives.data()), nodes_(make_tree(primitives, bound))
     {}
 
@@ -101,7 +101,7 @@ template<typename PrimitiveType>
     {
       public:
         inline CachedBounder(Bounder &bound,
-                             const std::vector<Primitive> &primitives);
+                             const std::vector<T> &primitives);
 
         inline float operator()(const size_t axis,
                                 const bool min,
@@ -123,7 +123,7 @@ template<typename PrimitiveType>
     template<typename Bounder>
       static void findBounds(const std::vector<size_t>::iterator begin,
                              const std::vector<size_t>::iterator end,
-                             const std::vector<Primitive> &primitives,
+                             const std::vector<T> &primitives,
                              CachedBounder<Bounder> &bound,
                              point &m, point &M);
 
@@ -131,7 +131,7 @@ template<typename PrimitiveType>
       struct PrimitiveSorter
     {
       inline PrimitiveSorter(const size_t axis,
-                             const std::vector<PrimitiveType> &primitives,
+                             const std::vector<T> &primitives,
                              Bounder &bound)
         :mAxis(axis),mPrimitives(primitives),mBound(bound)
       {
@@ -144,7 +144,7 @@ template<typename PrimitiveType>
       } // end operator<()
 
       size_t mAxis;
-      const std::vector<PrimitiveType> &mPrimitives;
+      const std::vector<T> &mPrimitives;
       Bounder &mBound;
     }; // end PrimitiveSorter
 
@@ -196,7 +196,7 @@ template<typename PrimitiveType>
                                            const node* right_brother,
                                            std::vector<size_t>::iterator begin,
                                            std::vector<size_t>::iterator end,
-                                           const std::vector<PrimitiveType> &primitives,
+                                           const std::vector<T> &primitives,
                                            Bounder &bound)
     {
       if(begin + 1 == end)
@@ -240,7 +240,7 @@ template<typename PrimitiveType>
 
 
     template<typename Bounder>
-    static std::vector<node> make_tree(const std::vector<Primitive> &primitives, Bounder &bound)
+    static std::vector<node> make_tree(const std::vector<T> &primitives, Bounder &bound)
     {
       // we will sort an array of indices
       std::vector<size_t> indices(primitives.size());
@@ -285,7 +285,7 @@ template<typename PrimitiveType>
       return &nodes_.back();
     }
 
-    const Primitive* primitives_;
+    const T* primitives_;
     std::vector<node> nodes_;
 };
 

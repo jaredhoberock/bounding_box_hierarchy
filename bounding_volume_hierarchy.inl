@@ -1,16 +1,16 @@
 #include "bounding_volume_hierarchy.hpp"
 #include <limits>
 
-template<typename PrimitiveType>
-const float bounding_volume_hierarchy<PrimitiveType>::EPS = 0.00005f;
+template<typename T>
+const float bounding_volume_hierarchy<T>::EPS = 0.00005f;
 
 
-template<typename PrimitiveType>
+template<typename T>
   template<typename Bounder>
-    void bounding_volume_hierarchy<PrimitiveType>
+    void bounding_volume_hierarchy<T>
       ::findBounds(const std::vector<size_t>::iterator begin,
                    const std::vector<size_t>::iterator end,
-                   const std::vector<Primitive> &primitives,
+                   const std::vector<T> &primitives,
                    CachedBounder<Bounder> &bound,
                    point &min_corner, point &max_corner)
 {
@@ -55,8 +55,8 @@ template<typename PrimitiveType>
 } // end bounding_volume_hierarchy::findBounds()
 
 
-template<typename PrimitiveType>
-  size_t bounding_volume_hierarchy<PrimitiveType>
+template<typename T>
+  size_t bounding_volume_hierarchy<T>
     ::findPrincipalAxis(const point &min_corner,
                         const point &max_corner)
 {
@@ -78,11 +78,11 @@ template<typename PrimitiveType>
 } // end bounding_volume_hierarchy::findPrincipalAxis()
 
 
-template<typename PrimitiveType>
+template<typename T>
   template<typename Bounder>
-    bounding_volume_hierarchy<PrimitiveType>::CachedBounder<Bounder>
+    bounding_volume_hierarchy<T>::CachedBounder<Bounder>
       ::CachedBounder(Bounder &bound,
-                      const std::vector<Primitive> &primitives)
+                      const std::vector<T> &primitives)
 {
   mPrimMinBounds[0].resize(primitives.size());
   mPrimMinBounds[1].resize(primitives.size());
@@ -93,7 +93,7 @@ template<typename PrimitiveType>
   mPrimMaxBounds[2].resize(primitives.size());
 
   size_t i = 0;
-  for(typename std::vector<PrimitiveType>::const_iterator prim = primitives.begin();
+  for(typename std::vector<T>::const_iterator prim = primitives.begin();
       prim != primitives.end();
       ++prim, ++i)
   {
