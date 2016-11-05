@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <array>
-#include <gpcpu/Vector.h>
 #include <algorithm>
 #include <numeric>
 #include <cassert>
