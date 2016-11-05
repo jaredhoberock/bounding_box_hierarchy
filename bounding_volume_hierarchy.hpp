@@ -1,17 +1,17 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <gpcpu/Vector.h>
 #include <algorithm>
 #include <numeric>
 #include <cassert>
 
-template<typename PrimitiveType, typename PointType, typename RealType = float>
+template<typename PrimitiveType, typename RealType = float>
   class bounding_volume_hierarchy
 {
   public:
     typedef PrimitiveType Primitive;
-    typedef PointType Point;
     typedef RealType Real;
 
     static const float EPS;
@@ -21,13 +21,13 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       : nodes_(make_tree(primitives, bound))
     {}
 
-    template<typename Intersector>
-    bool intersect(const Point &o, const Point &d, Real tMin, Real tMax, Intersector &intersect) const
+    template<class Point, class Vector, typename Intersector>
+    bool intersect(const Point &origin, const Vector &direction, Real tMin, Real tMax, Intersector &intersect) const
     {
-      Point invDir;
-      invDir[0] = Real(1.0) / d[0];
-      invDir[1] = Real(1.0) / d[1];
-      invDir[2] = Real(1.0) / d[2];
+      point invDir;
+      invDir[0] = Real(1.0) / direction[0];
+      invDir[1] = Real(1.0) / direction[1];
+      invDir[2] = Real(1.0) / direction[2];
 
       const node* current_node = root_node();
       bool hit = false;
@@ -37,17 +37,17 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       {
         if(!is_leaf(current_node))
         {
-          hit = intersectBox(o, invDir,
-                             current_node->min_corner_,
-                             current_node->max_corner_,
-                             tMin, tMax);
+          hit = intersect_box(origin, invDir,
+                              current_node->min_corner_,
+                              current_node->max_corner_,
+                              tMin, tMax);
         }
         else
         {
           // the index of the primitive contained inside the leaf node is the same as the leaf node's index
           size_t primitive_idx = current_node - nodes_.data();
 
-          hit = intersect(o, d, primitive_idx, t) && t < tMax && t > tMin;
+          hit = intersect(origin, direction, primitive_idx, t) && t < tMax && t > tMin;
           result |= hit;
           if(hit)
             tMax = std::min(t, tMax);
@@ -59,11 +59,36 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       return result;
     }
 
-    static bool intersectBox(const Point &o, const Point &invDir,
-                             const Point &minBounds, const Point &maxBounds, 
-                             const Real &tMin, const Real &tMax);
+  private:
+    using point = std::array<float,3>;
 
-  protected:
+    template<class Point, class Vector>
+    static bool intersect_box(const Point &o, const Vector &one_over_direction,
+                              const point &min_corner, const point &max_corner, 
+                              const Real &tMin, const Real &tMax)
+    {
+      point tMin3, tMax3;
+      for(int i = 0; i < 3; ++i)
+      {
+        tMin3[i] = (min_corner[i] - o[i]) * one_over_direction[i];
+        tMax3[i] = (max_corner[i] - o[i]) * one_over_direction[i];
+      }
+
+      point tNear3{std::min(tMin3[0], tMax3[0]),
+                   std::min(tMin3[1], tMax3[1]),
+                   std::min(tMin3[2], tMax3[2])};
+      point  tFar3{std::max(tMin3[0], tMax3[0]),
+                   std::max(tMin3[1], tMax3[1]),
+                   std::max(tMin3[2], tMax3[2])};
+
+      Real tNear = std::max(std::max(tNear3[0], tNear3[1]), tNear3[2]);
+      Real tFar  = std::min(std::min( tFar3[0],  tFar3[1]),  tFar3[2]);
+
+      bool hit = tNear <= tFar;
+      return hit && tMax >= tNear && tMin <= tFar;
+    }
+
+
     /*! The idea of this class is to wrap Bounder
      *  and accelerate build() by caching the results
      *  of Bounder.
@@ -100,7 +125,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
                              const std::vector<size_t>::iterator end,
                              const std::vector<Primitive> &primitives,
                              CachedBounder<Bounder> &bound,
-                             Point &m, Point &M);
+                             point &m, point &M);
 
     template<typename Bounder>
       struct PrimitiveSorter
@@ -123,21 +148,21 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       Bounder &mBound;
     }; // end PrimitiveSorter
 
-    static size_t findPrincipalAxis(const Point &min, const Point &max);
+    static size_t findPrincipalAxis(const point &min, const point &max);
 
     struct node
     {
       const node* hit_node_;
       const node* miss_node_;
-      Point min_corner_;
-      Point max_corner_;
+      point min_corner_;
+      point max_corner_;
 
       node() = default;
 
       node(const node* hit_node,
            const node* miss_node,
-           const Point& min_corner,
-           const Point& max_corner)
+           const point& min_corner,
+           const point& max_corner)
         : hit_node_(hit_node),
           miss_node_(miss_node),
           min_corner_(min_corner),
@@ -155,7 +180,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       node(const node* hit_node, const node* miss_node, size_t primitive_index)
         : hit_node_(hit_node),
           miss_node_(miss_node),
-          min_corner_(coerce<float>(primitive_index), 0, 0)
+          min_corner_{coerce<float>(primitive_index), 0, 0}
       {}
 
       size_t primitive_index() const
@@ -188,10 +213,10 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
       else
       {
         // find the bounds of the primitives
-        Point m, M;
-        findBounds(begin, end, primitives, bound, m, M);
+        point min_corner, max_corner;
+        findBounds(begin, end, primitives, bound, min_corner, max_corner);
 
-        size_t axis = findPrincipalAxis(m, M);
+        size_t axis = findPrincipalAxis(min_corner, max_corner);
 
         // create an ordering
         PrimitiveSorter<Bounder> sorter(axis,primitives,bound);
@@ -208,7 +233,7 @@ template<typename PrimitiveType, typename PointType, typename RealType = float>
         const node* left_child = make_tree_recursive(tree, right_child, right_child, begin, split, primitives, bound);
 
         // create a new node
-        tree.emplace_back(left_child, miss_node, m, M);
+        tree.emplace_back(left_child, miss_node, min_corner, max_corner);
         return &tree.back();
       }
     }
