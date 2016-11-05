@@ -67,6 +67,17 @@ class bounding_volume_hierarchy
       }
     };
 
+
+    struct convert_to_float
+    {
+      template<class U>
+      float operator()(const U& x) const
+      {
+        return static_cast<float>(x);
+      }
+    };
+
+
   public:
     using element_type = T;
 
@@ -84,23 +95,38 @@ class bounding_volume_hierarchy
       : elements_(&*elements.begin()), nodes_(make_tree(elements, bounder, epsilon))
     {}
 
+
     bounding_box_type bounding_box() const
     {
       return bounding_box(root_node());
     }
 
 
+    /// Finds the nearest intersection, if any, between a ray and the elements of this bounding_volume_hierarchy.
+    /// \param origin The ray's origin.
+    /// \param direction The ray's direction.
+    /// \param interval The parametric ray interval to consider. Defaults to [0,1).
+    /// \param intersector A function to test for intersection between a ray and element.
+    ///                    Signature is expected to be result_type intersector(T,Point,Direction,Interval). Defaults to `T::intersect()`.
+    /// \param hit_time A function to return the value of the ray parameter at the time of an intersection.
+    ///                 Signature is expected to be `float hit_time(result_type)`, where `result_type` is the type returned by `intersector`.
+    ///                 By default, this function converts `result_type` to `float`.
+    /// \return The nearest result of `intersector` along the ray, if an intersection exists. Empty, otherwise.
+    //
+    // XXX maybe the default hit_time should be to call result_type::hit_time() if result_type is not convertible to float?
     template<class Point, class Vector,
              class Interval = std::array<float,2>,
-             class Function = call_member_intersect>
-    std::experimental::optional<float>
+             class Function1 = call_member_intersect,
+             class Function2 = convert_to_float>
+    std::result_of_t<Function1(T,Point,Vector,Interval)>
       intersect(Point origin, Vector direction,
                 Interval interval = Interval{0.f, 1.f},
-                Function intersector = Function()) const
+                Function1 intersector = call_member_intersect(),
+                Function2 hit_time = convert_to_float()) const
     {
       Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
 
-      std::experimental::optional<float> result;
+      std::result_of_t<Function1(T,Point,Vector,Interval)> result;
 
       const node* current_node = root_node();
 
@@ -119,7 +145,7 @@ class bounding_volume_hierarchy
           if(current_result)
           {
             // shorten interval
-            interval[1] = *current_result;
+            interval[1] = hit_time(*current_result);
 
             // update result
             result = current_result;
@@ -148,7 +174,7 @@ class bounding_volume_hierarchy
       }
 
       Point t_near3{std::min(t_min3[0], t_max3[0]), std::min(t_min3[1], t_max3[1]), std::min(t_min3[2], t_max3[2])};
-      Point  t_far3{std::max(t_min3[0], t_max3[0]), std::max(t_min3[1], t_max3[1]), std::max(t_min3[2], t_max3[2])};
+      Point t_far3{ std::max(t_min3[0], t_max3[0]), std::max(t_min3[1], t_max3[1]), std::max(t_min3[2], t_max3[2])};
 
       auto t_near = std::max(std::max(t_near3[0], t_near3[1]), t_near3[2]);
       auto t_far  = std::min(std::min(t_far3[0],  t_far3[1]),  t_far3[2]);
