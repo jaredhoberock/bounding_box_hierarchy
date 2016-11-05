@@ -279,14 +279,6 @@ class bounding_volume_hierarchy
           bounding_box_(bounding_box)
       {}
 
-      template<class To, class From>
-      static To coerce(const From& from)
-      {
-        union {From from; To to;} u;
-        u.from = from;
-        return u.to;
-      }
-
       node(const node* hit_node, const node* miss_node, size_t primitive_index)
         : hit_node_(hit_node),
           miss_node_(miss_node)
@@ -320,10 +312,8 @@ class bounding_volume_hierarchy
         // find the bounding box of the elements
         bounding_box_type box = bounding_box(begin, end, elements, bounder, epsilon);
 
-        size_t axis = largest_axis(box);
-
         // create an ordering
-        sort_bounding_boxes_by_axis<Bounder> compare(axis,elements,bounder);
+        sort_bounding_boxes_by_axis<Bounder> compare(largest_axis(box),elements,bounder);
         
         // sort the median
         std::vector<size_t>::iterator split = begin + (end - begin) / 2;
@@ -344,7 +334,7 @@ class bounding_volume_hierarchy
 
 
     template<class ContiguousRange, class Bounder>
-    static std::vector<node> make_tree(const ContiguousRange &elements, Bounder bounder, float epsilon)
+    static std::vector<node> make_tree(const ContiguousRange& elements, Bounder bounder, float epsilon)
     {
       // we will sort an array of indices
       std::vector<size_t> indices(elements.size());
