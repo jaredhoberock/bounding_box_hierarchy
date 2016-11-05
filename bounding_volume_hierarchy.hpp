@@ -9,6 +9,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "optional.hpp"
+
 
 template<class T, class Bounder>
 struct memoized_bounder
@@ -91,13 +93,14 @@ class bounding_volume_hierarchy
     template<class Point, class Vector,
              class Interval = std::array<float,2>,
              class Function = call_member_intersect>
-    bool intersect(Point origin, Vector direction,
-                   Interval interval = Interval{0.f, 1.f},
-                   Function intersector = Function()) const
+    std::experimental::optional<float>
+      intersect(Point origin, Vector direction,
+                Interval interval = Interval{0.f, 1.f},
+                Function intersector = Function()) const
     {
       Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
 
-      bool result = false;
+      std::experimental::optional<float> result;
 
       const node* current_node = root_node();
 
@@ -125,7 +128,7 @@ class bounding_volume_hierarchy
             {
               // shorten interval
               interval[1] = t;
-              result = true;
+              result = t;
             }
           }
         }
