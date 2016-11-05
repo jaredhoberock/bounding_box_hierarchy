@@ -57,7 +57,7 @@ struct triangle : std::array<point,3>
     float divisor = dot(s1,e1);
     if(divisor == 0.f)
     {
-      return false;
+      return std::experimental::nullopt;
     }
 
     float inv_divisor = 1.f / divisor;
@@ -67,14 +67,14 @@ struct triangle : std::array<point,3>
     float b0 = dot(d,s1) * inv_divisor;
     if(b0 < 0.f || b0 > 1.f)
     {
-      return false;
+      return std::experimental::nullopt;
     }
 
     vector s2 = cross(d,e1);
     float b1 = dot(direction, s2) * inv_divisor;
     if(b1 < 0.f || b0 + b1 > 1.f)
     {
-      return false;
+      return std::experimental::nullopt;
     }
 
     // compute t
