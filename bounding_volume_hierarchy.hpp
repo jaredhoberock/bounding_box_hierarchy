@@ -147,7 +147,7 @@ class bounding_volume_hierarchy
 
       pair_of_points operator()(const T& element) const
       {
-        size_t element_idx = element - elements_;
+        size_t element_idx = &element - elements_;
         return pair_of_points(min_corners[element_idx], max_corners[element_idx]);
       }
 
@@ -161,7 +161,7 @@ class bounding_volume_hierarchy
     static std::pair<point,point> bounding_box(const std::vector<size_t>::iterator begin,
                                                const std::vector<size_t>::iterator end,
                                                const std::vector<T> &elements,
-                                               memoized_bounder<Bounder> &bound,
+                                               memoized_bounder<Bounder>& bounder,
                                                float epsilon)
     {
       float inf = std::numeric_limits<float>::infinity();
@@ -174,23 +174,12 @@ class bounding_volume_hierarchy
           t != end;
           ++t)
       {
-        for(size_t i =0;
-            i < 3;
-            ++i)
+        auto bounding_box = bounder(elements[*t]);
+
+        for(int i = 0; i < 3; ++i)
         {
-          x = bound(i, true, *t);
-
-          if(x < min_corner[i])
-          {
-            min_corner[i] = x;
-          }
-
-          x = bound(i, false, *t);
-
-          if(x > max_corner[i])
-          {
-            max_corner[i] = x;
-          }
+          min_corner[i] = std::min(min_corner[i], std::get<0>(bounding_box)[i]);
+          max_corner[i] = std::max(max_corner[i], std::get<1>(bounding_box)[i]);
         }
       }
 
