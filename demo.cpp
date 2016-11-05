@@ -102,7 +102,7 @@ struct triangle : std::array<point,3>
 
 struct bound_triangle
 {
-  float operator()(int axis, bool min, const triangle& tri) const
+  float operator()(const triangle& tri, int axis, bool min) const
   {
     if(min)
     {
@@ -110,6 +110,11 @@ struct bound_triangle
     }
 
     return std::max(tri[0][axis], std::max(tri[1][axis], tri[2][axis]));
+  }
+
+  float operator()(int axis, bool min, const triangle& tri) const
+  {
+    return operator()(tri, axis, min);
   }
 };
 

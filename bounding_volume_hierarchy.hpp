@@ -101,12 +101,12 @@ class bounding_volume_hierarchy
     }
 
 
-    template<typename Bounder>
+    template<class Bounder>
     class memoized_bounder
     {
       public:
         template<class ContiguousRange>
-        memoized_bounder(Bounder &bound, const ContiguousRange& elements)
+        memoized_bounder(const ContiguousRange& elements, Bounder bound)
         {
           mPrimMinBounds[0].resize(elements.size());
           mPrimMinBounds[1].resize(elements.size());
@@ -119,17 +119,20 @@ class bounding_volume_hierarchy
           size_t i = 0;
           for(auto element = elements.begin(); element != elements.end(); ++element, ++i)
           {
-            mPrimMinBounds[0][i] = bound(0, true, *element);
-            mPrimMinBounds[1][i] = bound(1, true, *element);
-            mPrimMinBounds[2][i] = bound(2, true, *element);
+            mPrimMinBounds[0][i] = bound(*element, 0, true);
+            mPrimMinBounds[1][i] = bound(*element, 1, true);
+            mPrimMinBounds[2][i] = bound(*element, 2, true);
 
-            mPrimMaxBounds[0][i] = bound(0, false, *element);
-            mPrimMaxBounds[1][i] = bound(1, false, *element);
-            mPrimMaxBounds[2][i] = bound(2, false, *element);
+            mPrimMaxBounds[0][i] = bound(*element, 0, false);
+            mPrimMaxBounds[1][i] = bound(*element, 1, false);
+            mPrimMaxBounds[2][i] = bound(*element, 2, false);
           }
         }
 
-        float operator()(const size_t axis, const bool min, const size_t element_idx)
+        // XXX operator()() needs to be:
+        // result_of_t<Bounder(T)> operator()(const T& element) const
+
+        float operator()(const size_t axis, const bool min, size_t element_idx)
         {
           if(min)
           {
@@ -325,7 +328,7 @@ class bounding_volume_hierarchy
       tree.resize(elements.size());
     
       // memoize the bound function
-      memoized_bounder<Bounder> memoized_bound(bound,elements);
+      memoized_bounder<Bounder> memoized_bound(elements,bound);
     
       // recurse
       make_tree_recursive(tree,
