@@ -41,10 +41,7 @@ class bounding_volume_hierarchy
       {
         if(!is_leaf(current_node))
         {
-          hit = intersect_box(origin, one_over_direction,
-                              current_node->min_corner_,
-                              current_node->max_corner_,
-                              interval);
+          hit = intersect_box(origin, one_over_direction, current_node->min_corner_, current_node->max_corner_, interval);
         }
         else
         {
