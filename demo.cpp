@@ -100,16 +100,18 @@ struct triangle : std::array<point,3>
 };
 
 
-// this should just return a pair of points (min, max)
-float bound_triangle(int axis, bool min, const triangle& tri)
+struct bound_triangle
 {
-  if(min)
+  float operator()(int axis, bool min, const triangle& tri) const
   {
-    return std::min(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
-  }
+    if(min)
+    {
+      return std::min(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
+    }
 
-  return std::max(tri[0][axis], std::max(tri[1][axis], tri[2][axis]));
-}
+    return std::max(tri[0][axis], std::max(tri[1][axis], tri[2][axis]));
+  }
+};
 
 
 struct intersect_triangle
@@ -181,9 +183,10 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
 
   // build bvhs
   BoundingVolumeHierarchy<triangle, point> old_bvh;
-  old_bvh.build(triangles, bound_triangle);
+  bound_triangle bound;
+  old_bvh.build(triangles, bound);
 
-  bounding_volume_hierarchy<triangle> new_bvh(triangles, bound_triangle);
+  bounding_volume_hierarchy<triangle> new_bvh(triangles, bound_triangle{});
 
   // generate some random rays
   auto rays = random_rays_in_unit_cube(num_rays, seed + 1);
