@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <chrono>
 
 #include "bounding_volume_hierarchy.hpp"
 #include "bounding_box_hierarchy.hpp"
@@ -212,6 +213,36 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 }
 
 
+template<class Hierarchy>
+double measure_performance(const Hierarchy& hierarchy, const std::vector<triangle>& triangles, const std::vector<ray>& rays)
+{
+  std::vector<float> results(rays.size());
+
+  // warm up
+  for(int i = 0; i < rays.size(); ++i)
+  {
+    results[i] = hierarchy.intersect(rays[i].first, rays[i].second).value_or(-0.f);
+  }
+
+  size_t num_trials = 20;
+
+  auto start = std::chrono::high_resolution_clock::now();
+
+  for(int trial = 0; trial < num_trials; ++trial)
+  {
+    for(int i = 0; i < rays.size(); ++i)
+    {
+      results[i] = hierarchy.intersect(rays[i].first, rays[i].second).value_or(-0.f);
+    }
+  }
+
+  std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
+  double mean_time = elapsed.count() / num_trials;
+
+  return double(rays.size()) / mean_time;
+}
+
+
 int main()
 {
   for(size_t i = 0; i < 20; ++i)
@@ -230,6 +261,19 @@ int main()
     assert(test<bounding_volume_hierarchy<triangle>>(triangles, rays));
     assert(test<bounding_box_hierarchy<triangle>>(triangles, rays));
   }
+
+  size_t num_triangles = 1 << 10;
+  size_t num_rays = 1 << 10;
+
+  std::mt19937 rng;
+  auto triangles = random_triangles_in_unit_cube(num_triangles, rng());
+  auto rays = random_rays_in_unit_cube(num_rays, rng());
+
+  std::cout << "timing bounding box hierarchy: " << std::endl;
+  bounding_box_hierarchy<triangle> bbh(triangles);
+  auto rays_per_second = measure_performance(bbh, triangles, rays);
+
+  std::cout << "bounding_box_hierarchy: " << rays_per_second << " rays/s" << std::endl;
 
   std::cout << "OK" << std::endl;
 
