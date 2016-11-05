@@ -92,8 +92,9 @@ class bounding_box_hierarchy
 
       std::result_of_t<Function1(T,Point,Vector,Interval)> result;
 
-      // XXX need to make this a short stack
-      std::stack<const node*> stack;
+      using stack_type = short_stack<const node*,64>;
+
+      stack_type stack;
       stack.push(root_node());
 
       while(!stack.empty())
@@ -130,6 +131,44 @@ class bounding_box_hierarchy
 
 
   private:
+    template<class U, size_t N>
+    class short_stack : private std::array<U,N>
+    {
+      public:
+        short_stack()
+          : top_(this->data())
+        {}
+
+        void push(const U& value)
+        {
+          ++top_;
+          *top_ = value;
+        }
+
+        U&& pop()
+        {
+          return std::move(*top_--);
+        }
+
+        bool empty() const
+        {
+          return top_ == this->data();
+        }
+
+        U& top()
+        {
+          return *top_;
+        }
+
+        const U& top() const
+        {
+          return *top_;
+        }
+
+      private:
+        U* top_;
+    };
+
     template<class Point, class Vector, class Interval>
     static bool intersect_box(const bounding_box_type& box,
                               Point origin,
