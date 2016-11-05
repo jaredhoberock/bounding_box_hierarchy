@@ -31,10 +31,7 @@ class bounding_volume_hierarchy
     template<class Point, class Vector, typename Interval = std::array<float,2>, class Function = call_member_intersect>
     bool intersect(Point origin, Vector direction, Interval interval = Interval{0.f, 1.f}, Function intersector = call_member_intersect()) const
     {
-      point one_over_direction;
-      one_over_direction[0] = 1.f / direction[0];
-      one_over_direction[1] = 1.f / direction[1];
-      one_over_direction[2] = 1.f / direction[2];
+      point one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
 
       const node* current_node = root_node();
       bool hit = false;
