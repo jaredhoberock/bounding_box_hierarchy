@@ -80,7 +80,25 @@ struct triangle : std::array<point,3>
 
     return true;
   }
+
+  std::pair<point,point> bounding_box() const
+  {
+    point min_corner;
+
+    min_corner[0] = std::min((*this)[0][0], std::min((*this)[1][0], (*this)[2][0]));
+    min_corner[1] = std::min((*this)[0][1], std::min((*this)[1][1], (*this)[2][1]));
+    min_corner[2] = std::min((*this)[0][2], std::min((*this)[1][2], (*this)[2][2]));
+
+    point max_corner;
+
+    max_corner[0] = std::max((*this)[0][0], std::max((*this)[1][0], (*this)[2][0]));
+    max_corner[1] = std::max((*this)[0][1], std::max((*this)[1][1], (*this)[2][1]));
+    max_corner[2] = std::max((*this)[0][2], std::max((*this)[1][2], (*this)[2][2]));
+
+    return std::make_pair(min_corner, max_corner);
+  }
 };
+
 
 // this should just return a pair of points (min, max)
 float bound_triangle(int axis, bool min, const triangle& tri)
@@ -90,7 +108,7 @@ float bound_triangle(int axis, bool min, const triangle& tri)
     return std::min(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
   }
 
-  return std::max(tri[0][axis], std::min(tri[1][axis], tri[2][axis]));
+  return std::max(tri[0][axis], std::max(tri[1][axis], tri[2][axis]));
 }
 
 

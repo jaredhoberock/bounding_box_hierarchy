@@ -19,10 +19,21 @@ class bounding_volume_hierarchy
       }
     };
 
+    struct call_member_bounding_box
+    {
+      auto operator()(const T& element) const
+      {
+        return element.bounding_box();
+      }
+    };
+
   public:
     using element_type = T;
 
     // XXX Bounder should take const T& and return pair<Point,Point>
+    // XXX Bounder should default to call_member_bounding_box
+    //
+    // XXX bounder should come after epsilon? to match the parameter order of similar parameters of intersect()?
     template<class ContiguousRange, class Bounder>
     bounding_volume_hierarchy(const ContiguousRange& elements, Bounder& bound, float epsilon = std::numeric_limits<float>::epsilon())
       : elements_(&*elements.begin()), nodes_(make_tree(elements, bound, epsilon))
