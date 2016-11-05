@@ -17,8 +17,10 @@ struct memoized_bounder
   // that may be different than the type of bounding box used by bounding_volume_hierarchy
   using bounding_box_type = std::result_of_t<Bounder(const T&)>;
 
+
   // avoid copying this thing unintentionally
   memoized_bounder(memoized_bounder&&) = delete;
+
 
   template<class ContiguousRange>
   memoized_bounder(const ContiguousRange& elements, Bounder bounder)
@@ -28,11 +30,13 @@ struct memoized_bounder
     std::transform(elements.begin(), elements.end(), std::back_inserter(bounding_boxes_), bounder);
   }
 
+
   bounding_box_type operator()(const T& element) const
   {
     size_t element_idx = &element - elements_;
     return bounding_boxes_[element_idx];
   }
+
 
   const T* elements_;
   std::vector<bounding_box_type> bounding_boxes_;
@@ -52,6 +56,7 @@ class bounding_volume_hierarchy
       }
     };
 
+
     struct call_member_bounding_box
     {
       auto operator()(const T& element) const
@@ -63,12 +68,17 @@ class bounding_volume_hierarchy
   public:
     using element_type = T;
 
+
     // a bounding box is an array of two arrays of three floats
     // XXX if T::bounding_box() exists, we should use its result for our bounding_box_type
     using bounding_box_type = std::array<std::array<float,3>,2>;
 
-    template<class ContiguousRange, class Bounder = call_member_bounding_box>
-    bounding_volume_hierarchy(const ContiguousRange& elements, float epsilon = std::numeric_limits<float>::epsilon(), Bounder bounder = call_member_bounding_box())
+
+    template<class ContiguousRange,
+             class Bounder = call_member_bounding_box>
+    bounding_volume_hierarchy(const ContiguousRange& elements,
+                              Bounder bounder = call_member_bounding_box(),
+                              float epsilon = std::numeric_limits<float>::epsilon())
       : elements_(&*elements.begin()), nodes_(make_tree(elements, bounder, epsilon))
     {}
 
@@ -77,8 +87,13 @@ class bounding_volume_hierarchy
       return {root_node().min_corner_, root_node().max_corner_};
     }
 
-    template<class Point, class Vector, typename Interval = std::array<float,2>, class Function = call_member_intersect>
-    bool intersect(Point origin, Vector direction, Interval interval = Interval{0.f, 1.f}, Function intersector = call_member_intersect()) const
+
+    template<class Point, class Vector,
+             class Interval = std::array<float,2>,
+             class Function = call_member_intersect>
+    bool intersect(Point origin, Vector direction,
+                   Interval interval = Interval{0.f, 1.f},
+                   Function intersector = Function()) const
     {
       Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
 
@@ -109,9 +124,13 @@ class bounding_volume_hierarchy
       return result;
     }
 
+
   private:
     template<class Point, class Vector, class Interval>
-    static bool intersect_box(Point origin, Vector one_over_direction, const bounding_box_type& box, Interval interval)
+    static bool intersect_box(Point origin,
+                              Vector one_over_direction,
+                              const bounding_box_type& box,
+                              Interval interval)
     {
       Point t_min3, t_max3;
       for(int i = 0; i < 3; ++i)
@@ -168,6 +187,7 @@ class bounding_volume_hierarchy
 
       return result;
     }
+
 
     template<typename Bounder>
     struct sort_bounding_boxes_by_axis
@@ -324,20 +344,24 @@ class bounding_volume_hierarchy
       return tree;
     }
 
+
     const node* leaves_end() const
     {
       return nodes_.data() + (nodes_.size() + 1) / 2;
     }
+
 
     bool is_leaf(const node* n) const
     {
       return n < leaves_end();
     }
 
+
     const node* root_node() const
     {
       return &nodes_.back();
     }
+
 
     const T* elements_;
     std::vector<node> nodes_;
