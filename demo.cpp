@@ -7,34 +7,25 @@
 
 #include "bounding_volume_hierarchy.hpp"
 
-struct point : std::array<float,3>
-{
-  point() = default; 
-  point(const point&) = default; 
-  point(float x, float y, float z) : std::array<float,3>{x,y,z} {}
-};
-
+using point = std::array<float,3>;
 
 point operator-(const point& lhs, const point& rhs)
 {
   return {lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]};
 }
 
-
 using vector = point;
-
 
 float dot(const vector& lhs, const vector& rhs)
 {
   return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0.f);
 }
 
-
 vector cross(const vector& lhs, const vector& rhs)
 {
   vector result;
   
-  vector subtract_me(lhs[2]*rhs[1], lhs[0]*rhs[2], lhs[1]*rhs[0]);
+  vector subtract_me{lhs[2]*rhs[1], lhs[0]*rhs[2], lhs[1]*rhs[0]};
   
   result[0]  = (lhs[1] * rhs[2]);
   result[0] -= subtract_me[0];
@@ -166,6 +157,7 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
   {
     auto& ray = rays[i];
 
+    // use a custom intersection functor to return a pointer to the triangle and the hit time
     auto intersection = bvh.intersect(ray.first, ray.second, {0,1}, [](const auto& tri, const auto& o, const auto& d, const auto& i)
     {
       std::experimental::optional<float> intermediate_result = tri.intersect(o,d,i);
@@ -178,7 +170,7 @@ void test(size_t num_triangles, size_t num_rays, size_t seed = 0)
 
       return std::experimental::optional<intersection_type>();
     },
-    [](const auto& result)
+    [](const intersection_type& result)
     {
       // the hit time is the intersection's second half
       return result.second;
