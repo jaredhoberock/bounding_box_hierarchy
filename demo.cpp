@@ -8,6 +8,7 @@
 
 #include "bounding_volume_hierarchy.hpp"
 #include "bounding_box_hierarchy.hpp"
+#include "time_invocation.hpp"
 
 using point = std::array<float,3>;
 
@@ -196,7 +197,7 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 
       if(current_intersection)
       {
-        if(!nearest_intersection || *current_intersection < nearest_intersection->second)
+        if(current_intersection && !nearest_intersection || *current_intersection < nearest_intersection->second)
         {
           nearest_intersection = intersection_type(&tri,*current_intersection);
         }
@@ -214,30 +215,23 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 
 
 template<class Hierarchy>
-double measure_performance(const Hierarchy& hierarchy, const std::vector<triangle>& triangles, const std::vector<ray>& rays)
+double measure_performance(const Hierarchy& hierarchy, const std::vector<ray>& rays)
 {
   // warm up
-  for(int i = 0; i < rays.size(); ++i)
+  for(const auto& r : rays)
   {
-    hierarchy.intersect(rays[i].first, rays[i].second);
+    hierarchy.intersect(r.first, r.second);
   }
 
-  size_t num_trials = 20;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  for(int trial = 0; trial < num_trials; ++trial)
+  size_t milliseconds = time_invocation_in_milliseconds(20, [&]
   {
-    for(int i = 0; i < rays.size(); ++i)
+    for(const auto& r : rays)
     {
-      hierarchy.intersect(rays[i].first, rays[i].second);
+      hierarchy.intersect(r.first, r.second);
     }
-  }
+  });
 
-  std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  double mean_time = elapsed.count() / num_trials;
-
-  return double(rays.size()) / mean_time;
+  return double(1000 * rays.size()) / milliseconds;
 }
 
 
@@ -269,12 +263,12 @@ int main()
 
   std::cout << "timing bounding box hierarchy: " << std::endl;
   bounding_box_hierarchy<triangle> bbh(triangles);
-  auto bbh_rays_per_second = measure_performance(bbh, triangles, rays);
+  auto bbh_rays_per_second = measure_performance(bbh, rays);
   std::cout << "bounding_box_hierarchy: " << bbh_rays_per_second << " rays/s" << std::endl;
 
   std::cout << "timing bounding volume hierarchy: " << std::endl;
   bounding_volume_hierarchy<triangle> bvh(triangles);
-  auto bvh_rays_per_second = measure_performance(bvh, triangles, rays);
+  auto bvh_rays_per_second = measure_performance(bvh, rays);
   std::cout << "bounding_volume_hierarchy: " << bvh_rays_per_second << " rays/s" << std::endl;
 
   std::cout << "OK" << std::endl;
