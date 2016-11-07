@@ -156,15 +156,14 @@ std::vector<ray> random_rays_in_unit_cube(size_t n, int seed = 13)
 }
 
 
-template<class Hierarchy>
-bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
+using intersection_type = std::pair<float, const triangle*>;
+
+template<class Searcher>
+std::vector<intersection_type> find_intersections(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 {
-  // build hierarchy
-  Hierarchy hierarchy(triangles);
+  // build searcher
+  Searcher searcher(triangles);
 
-  using intersection_type = std::pair<float, const triangle*>;
-
-  // intersect against bvh
   std::vector<intersection_type> intersections;
   for(int i = 0; i < rays.size(); ++i)
   {
@@ -173,7 +172,7 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
     intersection_type init(1.f, nullptr);
 
     // use a custom intersection functor to return the hit time and a pointer to the triangle
-    auto intersection = hierarchy.intersect3(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
+    auto intersection = searcher.intersect3(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
     {
       return intersection_type(tri.intersect(o,d,nearest.first), &tri);
     });
@@ -184,27 +183,14 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
     }
   }
 
-  std::vector<intersection_type> reference_intersections;
-  exhaustive_searcher<triangle> reference(triangles);
-  for(int i = 0; i < rays.size(); ++i)
-  {
-    auto& ray = rays[i];
+  return std::move(intersections);
+}
 
-    intersection_type init(1.f, nullptr);
 
-    // use a custom intersection functor to return the hit time and a pointer to the triangle
-    auto intersection = reference.intersect3(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
-    {
-      return intersection_type(tri.intersect(o,d,nearest.first), &tri);
-    });
-
-    if(intersection.first < 1.f)
-    {
-      reference_intersections.push_back(intersection);
-    }
-  }
-
-  return intersections == reference_intersections;
+template<class Searcher>
+bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
+{
+  return find_intersections<Searcher>(triangles, rays) == find_intersections<exhaustive_searcher<triangle>>(triangles, rays);
 }
 
 
@@ -244,7 +230,6 @@ int main()
 
     std::cout << "testing " << m << " " << n << std::endl;
 
-    //assert(test<bounding_volume_hierarchy<triangle>>(triangles, rays));
     assert(test<bounding_box_hierarchy<triangle>>(triangles, rays));
   }
 
