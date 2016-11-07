@@ -4,11 +4,16 @@
 #include <array>
 #include <stack>
 #include <numeric>
+#include <functional>
+#include <algorithm>
 
 #include "memoized_bounder.hpp"
 #include "optional.hpp"
 
 
+// XXX the template parameter list might go something like this:
+//
+// template<class T, class Volume = default_bounding_box_type, class Function = default_bounding_volume_intersector>
 template<class T>
 class bounding_box_hierarchy
 {
@@ -62,6 +67,64 @@ class bounding_box_hierarchy
     bounding_box_type bounding_box() const
     {
       return bounding_box(root_node());
+    }
+
+
+    // intersect() is a reduction -- it reduces the collection of Ts into the single earliest intersection, if one exists.
+    // if an intersection does not exist, the result is init
+    // if intersector() just returns a float representing a "hit time", then init can be initialized to NaN, 1.f, or infinity
+    // U should really be the result of intersector, but because init comes before intersector in the parameter list,
+    // we can't get it
+    template<class Point, class Vector, class U,
+             class Function = call_member_intersect,
+             class BinaryFunction = std::less<>>
+    U new_intersect(Point origin, Vector direction, U init,
+                    Function intersector = call_member_intersect(),
+                    BinaryFunction compare = std::less<>()) const
+    {
+      U result = init;
+
+      Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
+
+      using stack_type = short_stack<const node*,64>;
+
+      stack_type stack;
+      stack.push(root_node());
+
+      while(!stack.empty())
+      {
+        const node* current_node = stack.top();
+        stack.pop();
+
+        if(is_leaf(current_node))
+        {
+          // we pass result to intersector() to implement things like
+          // * mailboxing
+          // * ray intervals
+          auto current_result = intersector(element(current_node), origin, direction, result);
+          result = std::min(result, current_result, compare);
+        }
+        else
+        {
+          // XXX the problem here is that we don't know the hit time of the nearest intersection
+          //     we could pass result to intersect_box(), but it wouldn'necessarily know how to interpret it
+          //     we could change this to call
+          //
+          //         intersect(bounding_box(current_node), origin, direction, result)
+          //
+          //     This would require the bounding_box_type to know about about Us
+          //     It would also complicate how to implement the one_over_direction optimization
+          //if(intersect_box(bounding_box(current_node), origin, one_over_direction, interval)) // XXX how to implement this?
+          if(compare(bounding_box(current_node).intersect(origin, direction, result), result))
+          {
+            // push children to stack 
+            stack.push(current_node->left_child_);
+            stack.push(current_node->right_child_);
+          }
+        }
+      }
+
+      return result;
     }
 
 
