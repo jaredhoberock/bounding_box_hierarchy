@@ -191,21 +191,10 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
     intersection_type init(1.f, nullptr);
 
     // use a custom intersection functor to return the hit time and a pointer to the triangle
-    auto intersection = hierarchy.intersect2(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
+    auto intersection = hierarchy.intersect3(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
     {
       return intersection_type(tri.intersect(o,d,nearest.first), &tri);
-    },
-    // XXX this sucks -- we can't necessarily use std::less because the triangle pointer is the tie breaker
-    overload(
-      [](const intersection_type& lhs, const intersection_type& rhs)
-      {
-        return lhs.first < rhs.first;
-      },
-      [](const intersection_type& inter, float t)
-      {
-        return inter.first < t;
-      }
-    ));
+    });
 
     if(intersection.first < 1.f)
     {

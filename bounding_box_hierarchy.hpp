@@ -6,6 +6,7 @@
 #include <numeric>
 #include <functional>
 #include <algorithm>
+#include <tuple>
 
 #include "memoized_bounder.hpp"
 #include "optional.hpp"
@@ -37,12 +38,23 @@ class bounding_box_hierarchy
     };
 
 
-    struct convert_to_float
+    struct default_projection
     {
-      template<class U>
-      float operator()(const U& x) const
+      float operator()(float x) const
       {
-        return static_cast<float>(x);
+        return x;
+      }
+
+      template<class... Types>
+      auto operator()(const std::tuple<Types...>& t) const
+      {
+        return std::get<float>(t);
+      }
+
+      template<class T1, class T2>
+      auto operator()(const std::pair<T1,T2>& p) const
+      {
+        return std::get<float>(p);
       }
     };
 
@@ -70,54 +82,54 @@ class bounding_box_hierarchy
     }
 
 
-    //template<class Point, class Vector, class U,
-    //         class Function1 = call_member_intersect,
-    //         class Function2 = call_get_float>
-    //U intersect3(Point origin, Vector direction, U init,
-    //             Function1 intersector = call_member_intersect(),
-    //             Function2 hit_time = call_get_float()) const
-    //{
-    //  U result = init;
-    //  auto result_t = hit_time(result);
+    template<class Point, class Vector, class U,
+             class Function1 = call_member_intersect,
+             class Function2 = default_projection>
+    U intersect3(Point origin, Vector direction, U init,
+                 Function1 intersector = call_member_intersect(),
+                 Function2 hit_time = default_projection()) const
+    {
+      U result = init;
+      auto result_t = hit_time(result);
 
-    //  Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
+      Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
 
-    //  using stack_type = short_stack<const node*,64>;
+      using stack_type = short_stack<const node*,64>;
 
-    //  stack_type stack;
-    //  stack.push(root_node());
+      stack_type stack;
+      stack.push(root_node());
 
-    //  while(!stack.empty())
-    //  {
-    //    const node* current_node = stack.top();
-    //    stack.pop();
+      while(!stack.empty())
+      {
+        const node* current_node = stack.top();
+        stack.pop();
 
-    //    if(is_leaf(current_node))
-    //    {
-    //      // we pass result to intersector() to implement things like
-    //      // * mailboxing
-    //      // * ray intervals
-    //      auto current_result = intersector(element(current_node), origin, direction, result);
-    //      auto current_t = hit_time(current_result);
-    //      if(current_t < result_t)
-    //      {
-    //        result_t = current_t;
-    //        result = current_result;
-    //      }
-    //    }
-    //    else
-    //    {
-    //      if(intersect_box(bounding_box(current_node), origin, one_over_direction, nearest_t))
-    //      {
-    //        // push children to stack 
-    //        stack.push(current_node->left_child_);
-    //        stack.push(current_node->right_child_);
-    //      }
-    //    }
-    //  }
+        if(is_leaf(current_node))
+        {
+          // we pass result to intersector() to implement things like
+          // * mailboxing
+          // * ray intervals
+          auto current_result = intersector(element(current_node), origin, direction, result);
+          auto current_t = hit_time(current_result);
+          if(current_t < result_t)
+          {
+            result_t = current_t;
+            result = current_result;
+          }
+        }
+        else
+        {
+          if(intersect_box(bounding_box(current_node), origin, one_over_direction, result_t))
+          {
+            // push children to stack 
+            stack.push(current_node->left_child_);
+            stack.push(current_node->right_child_);
+          }
+        }
+      }
 
-    //  return result;
-    //}
+      return result;
+    }
 
 
     // intersect() is a reduction -- it reduces the collection of Ts into the single earliest intersection, if one exists.
@@ -185,12 +197,12 @@ class bounding_box_hierarchy
     template<class Point, class Vector,
              class Interval = std::array<float,2>,
              class Function1 = call_member_intersect,
-             class Function2 = convert_to_float>
+             class Function2 = default_projection>
     std::result_of_t<Function1(T,Point,Vector,Interval)>
       intersect(Point origin, Vector direction,
                 Interval interval = Interval{0.f, 1.f},
                 Function1 intersector = call_member_intersect(),
-                Function2 hit_time = convert_to_float()) const
+                Function2 hit_time = default_projection()) const
     {
       Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
 
@@ -296,11 +308,11 @@ class bounding_box_hierarchy
       return hit && interval[0] <= t_far && t_near <= interval[1];
     }
 
-
     template<class Point, class Vector>
     static float intersect_box(const bounding_box_type& box,
                                Point origin,
-                               Vector one_over_direction)
+                               Vector one_over_direction,
+                               float t_bound)
     {
       Point t_min3, t_max3;
       for(int i = 0; i < 3; ++i)
@@ -315,8 +327,17 @@ class bounding_box_hierarchy
       auto t_near = std::max(std::max(t_near3[0], t_near3[1]), t_near3[2]);
       auto t_far  = std::min(std::min(t_far3[0],  t_far3[1]),  t_far3[2]);
 
-      bool hit = t_near <= t_far && 0.f <= t_far && t_near <= 1.f;
-      return hit ? t_near : 1.f;
+      bool hit = t_near <= t_far && 0.f <= t_far && t_near <= t_bound;
+      return hit ? t_near : t_bound;
+    }
+
+
+    template<class Point, class Vector>
+    static float intersect_box(const bounding_box_type& box,
+                               Point origin,
+                               Vector one_over_direction)
+    {
+      return intersect_box(box, origin, one_over_direction, 1.f);
     }
 
 
