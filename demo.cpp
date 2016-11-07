@@ -8,6 +8,7 @@
 
 #include "bounding_volume_hierarchy.hpp"
 #include "bounding_box_hierarchy.hpp"
+#include "exhaustive_searcher.hpp"
 #include "time_invocation.hpp"
 
 using point = std::array<float,3>;
@@ -155,25 +156,6 @@ std::vector<ray> random_rays_in_unit_cube(size_t n, int seed = 13)
 }
 
 
-template<class Function1, class Function2>
-struct overloaded : public Function1, public Function2
-{
-  overloaded(Function1 f1, Function2 f2)
-    : Function1(f1),
-      Function2(f2)
-  {}
-
-  overloaded(const overloaded&) = default;
-};
-
-
-template<class Function1, class Function2>
-auto overload(Function1 f1, Function2 f2)
-{
-  return overloaded<Function1,Function2>(f1,f2);
-}
-
-
 template<class Hierarchy>
 bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 {
@@ -203,40 +185,23 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
   }
 
   std::vector<intersection_type> reference_intersections;
+  exhaustive_searcher<triangle> reference(triangles);
   for(int i = 0; i < rays.size(); ++i)
   {
     auto& ray = rays[i];
 
-    intersection_type nearest_intersection(1.f, nullptr);
+    intersection_type init(1.f, nullptr);
 
-    for(const auto& tri : triangles)
+    // use a custom intersection functor to return the hit time and a pointer to the triangle
+    auto intersection = reference.intersect3(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
     {
-      float t = tri.intersect(ray.first, ray.second, nearest_intersection.first);
+      return intersection_type(tri.intersect(o,d,nearest.first), &tri);
+    });
 
-      if(t < nearest_intersection.first)
-      {
-        nearest_intersection = intersection_type(t, &tri);
-      }
-    }
-
-    if(nearest_intersection.first < 1.f)
+    if(intersection.first < 1.f)
     {
-      reference_intersections.push_back(nearest_intersection);
+      reference_intersections.push_back(intersection);
     }
-  }
-
-  if(intersections != reference_intersections)
-  {
-    std::cerr << "reference_intersections.size(): " << reference_intersections.size() << std::endl;
-    std::cerr << "intersections.size(): " << intersections.size() << std::endl;
-
-    auto at = std::mismatch(intersections.begin(), intersections.end(), reference_intersections.begin());
-    std::cerr << "mismatch at " << at.first - intersections.begin() << std::endl;
-    std::cerr << "intersection t: " << at.first->first << std::endl;
-    std::cerr << "reference first t: " << at.second->first << std::endl;
-
-    std::cerr << "intersection tri: " << at.first->second << std::endl;
-    std::cerr << "reference first tri: " << at.second->second << std::endl;
   }
 
   return intersections == reference_intersections;
