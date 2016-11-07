@@ -43,7 +43,7 @@ vector cross(const vector& lhs, const vector& rhs)
 
 struct triangle : std::array<point,3>
 {
-  std::experimental::optional<float> intersect(const point& origin, const point& direction, const std::array<float,2>& interval) const
+  float intersect(const point& origin, const point& direction, float nearest) const
   {
     const point& p0 = (*this)[0];
     const point& p1 = (*this)[1];
@@ -55,7 +55,7 @@ struct triangle : std::array<point,3>
     float divisor = dot(s1,e1);
     if(divisor == 0.f)
     {
-      return std::experimental::nullopt;
+      return nearest;
     }
 
     float inv_divisor = 1.f / divisor;
@@ -65,20 +65,30 @@ struct triangle : std::array<point,3>
     float b0 = dot(d,s1) * inv_divisor;
     if(b0 < 0.f || b0 > 1.f)
     {
-      return std::experimental::nullopt;
+      return nearest;
     }
 
     vector s2 = cross(d,e1);
     float b1 = dot(direction, s2) * inv_divisor;
     if(b1 < 0.f || b0 + b1 > 1.f)
     {
-      return std::experimental::nullopt;
+      return nearest;
     }
 
     // compute t
     float t = inv_divisor * dot(e2,s2);
+    if(t < 0)
+    {
+      return nearest;
+    }
 
-    return (interval[0] <= t && t < interval[1]) ? std::experimental::make_optional(t) : std::experimental::nullopt;
+    return std::min(nearest, t);
+  }
+
+  std::experimental::optional<float> intersect(const point& origin, const point& direction, const std::array<float,2>& interval) const
+  {
+    float t = intersect(origin, direction, interval[1]);
+    return t < interval[1] ? std::experimental::make_optional(t) : std::experimental::nullopt;
   }
 
   std::array<point,2> bounding_box() const
@@ -145,13 +155,32 @@ std::vector<ray> random_rays_in_unit_cube(size_t n, int seed = 13)
 }
 
 
+template<class Function1, class Function2>
+struct overloaded : public Function1, public Function2
+{
+  overloaded(Function1 f1, Function2 f2)
+    : Function1(f1),
+      Function2(f2)
+  {}
+
+  overloaded(const overloaded&) = default;
+};
+
+
+template<class Function1, class Function2>
+auto overload(Function1 f1, Function2 f2)
+{
+  return overloaded<Function1,Function2>(f1,f2);
+}
+
+
 template<class Hierarchy>
 bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 {
   // build hierarchy
   Hierarchy hierarchy(triangles);
 
-  using intersection_type = std::pair<const triangle*,float>;
+  using intersection_type = std::pair<float, const triangle*>;
 
   // intersect against bvh
   std::vector<intersection_type> intersections;
@@ -159,28 +188,28 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
   {
     auto& ray = rays[i];
 
-    // use a custom intersection functor to return a pointer to the triangle and the hit time
-    auto intersection = hierarchy.intersect(ray.first, ray.second, {0,1}, [](const auto& tri, const auto& o, const auto& d, const auto& i)
+    intersection_type init(1.f, nullptr);
+
+    // use a custom intersection functor to return the hit time and a pointer to the triangle
+    auto intersection = hierarchy.intersect2(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
     {
-      std::experimental::optional<float> intermediate_result = tri.intersect(o,d,i);
-
-      if(intermediate_result)
-      {
-        auto result = intersection_type(&tri, *intermediate_result);
-        return std::experimental::make_optional(result);
-      }
-
-      return std::experimental::optional<intersection_type>();
+      return intersection_type(tri.intersect(o,d,nearest.first), &tri);
     },
-    [](const intersection_type& result)
-    {
-      // the hit time is the intersection's second half
-      return result.second;
-    });
+    // XXX this sucks -- we can't necessarily use std::less because the triangle pointer is the tie breaker
+    overload(
+      [](const intersection_type& lhs, const intersection_type& rhs)
+      {
+        return lhs.first < rhs.first;
+      },
+      [](const intersection_type& inter, float t)
+      {
+        return inter.first < t;
+      }
+    ));
 
-    if(intersection)
+    if(intersection.first < 1.f)
     {
-      intersections.push_back(*intersection);
+      intersections.push_back(intersection);
     }
   }
 
@@ -189,25 +218,36 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
   {
     auto& ray = rays[i];
 
-    std::experimental::optional<intersection_type> nearest_intersection;
+    intersection_type nearest_intersection(1.f, nullptr);
 
     for(const auto& tri : triangles)
     {
-      std::experimental::optional<float> current_intersection = tri.intersect(ray.first, ray.second, {0,1});
+      float t = tri.intersect(ray.first, ray.second, nearest_intersection.first);
 
-      if(current_intersection)
+      if(t < nearest_intersection.first)
       {
-        if(current_intersection && !nearest_intersection || *current_intersection < nearest_intersection->second)
-        {
-          nearest_intersection = intersection_type(&tri,*current_intersection);
-        }
+        nearest_intersection = intersection_type(t, &tri);
       }
     }
 
-    if(nearest_intersection)
+    if(nearest_intersection.first < 1.f)
     {
-      reference_intersections.push_back(*nearest_intersection);
+      reference_intersections.push_back(nearest_intersection);
     }
+  }
+
+  if(intersections != reference_intersections)
+  {
+    std::cerr << "reference_intersections.size(): " << reference_intersections.size() << std::endl;
+    std::cerr << "intersections.size(): " << intersections.size() << std::endl;
+
+    auto at = std::mismatch(intersections.begin(), intersections.end(), reference_intersections.begin());
+    std::cerr << "mismatch at " << at.first - intersections.begin() << std::endl;
+    std::cerr << "intersection t: " << at.first->first << std::endl;
+    std::cerr << "reference first t: " << at.second->first << std::endl;
+
+    std::cerr << "intersection tri: " << at.first->second << std::endl;
+    std::cerr << "reference first tri: " << at.second->second << std::endl;
   }
 
   return intersections == reference_intersections;
@@ -250,7 +290,7 @@ int main()
 
     std::cout << "testing " << m << " " << n << std::endl;
 
-    assert(test<bounding_volume_hierarchy<triangle>>(triangles, rays));
+    //assert(test<bounding_volume_hierarchy<triangle>>(triangles, rays));
     assert(test<bounding_box_hierarchy<triangle>>(triangles, rays));
   }
 
@@ -266,10 +306,10 @@ int main()
   auto bbh_rays_per_second = measure_performance(bbh, rays);
   std::cout << "bounding_box_hierarchy: " << bbh_rays_per_second << " rays/s" << std::endl;
 
-  std::cout << "timing bounding volume hierarchy: " << std::endl;
-  bounding_volume_hierarchy<triangle> bvh(triangles);
-  auto bvh_rays_per_second = measure_performance(bvh, rays);
-  std::cout << "bounding_volume_hierarchy: " << bvh_rays_per_second << " rays/s" << std::endl;
+  //std::cout << "timing bounding volume hierarchy: " << std::endl;
+  //bounding_volume_hierarchy<triangle> bvh(triangles);
+  //auto bvh_rays_per_second = measure_performance(bvh, rays);
+  //std::cout << "bounding_volume_hierarchy: " << bvh_rays_per_second << " rays/s" << std::endl;
 
   std::cout << "OK" << std::endl;
 

@@ -70,6 +70,56 @@ class bounding_box_hierarchy
     }
 
 
+    //template<class Point, class Vector, class U,
+    //         class Function1 = call_member_intersect,
+    //         class Function2 = call_get_float>
+    //U intersect3(Point origin, Vector direction, U init,
+    //             Function1 intersector = call_member_intersect(),
+    //             Function2 hit_time = call_get_float()) const
+    //{
+    //  U result = init;
+    //  auto result_t = hit_time(result);
+
+    //  Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
+
+    //  using stack_type = short_stack<const node*,64>;
+
+    //  stack_type stack;
+    //  stack.push(root_node());
+
+    //  while(!stack.empty())
+    //  {
+    //    const node* current_node = stack.top();
+    //    stack.pop();
+
+    //    if(is_leaf(current_node))
+    //    {
+    //      // we pass result to intersector() to implement things like
+    //      // * mailboxing
+    //      // * ray intervals
+    //      auto current_result = intersector(element(current_node), origin, direction, result);
+    //      auto current_t = hit_time(current_result);
+    //      if(current_t < result_t)
+    //      {
+    //        result_t = current_t;
+    //        result = current_result;
+    //      }
+    //    }
+    //    else
+    //    {
+    //      if(intersect_box(bounding_box(current_node), origin, one_over_direction, nearest_t))
+    //      {
+    //        // push children to stack 
+    //        stack.push(current_node->left_child_);
+    //        stack.push(current_node->right_child_);
+    //      }
+    //    }
+    //  }
+
+    //  return result;
+    //}
+
+
     // intersect() is a reduction -- it reduces the collection of Ts into the single earliest intersection, if one exists.
     // if an intersection does not exist, the result is init
     // if intersector() just returns a float representing a "hit time", then init can be initialized to NaN, 1.f, or infinity
@@ -78,9 +128,9 @@ class bounding_box_hierarchy
     template<class Point, class Vector, class U,
              class Function = call_member_intersect,
              class BinaryFunction = std::less<>>
-    U new_intersect(Point origin, Vector direction, U init,
-                    Function intersector = call_member_intersect(),
-                    BinaryFunction compare = std::less<>()) const
+    U intersect2(Point origin, Vector direction, U init,
+                 Function intersector = call_member_intersect(),
+                 BinaryFunction compare = std::less<>()) const
     {
       U result = init;
 
@@ -106,16 +156,7 @@ class bounding_box_hierarchy
         }
         else
         {
-          // XXX the problem here is that we don't know the hit time of the nearest intersection
-          //     we could pass result to intersect_box(), but it wouldn'necessarily know how to interpret it
-          //     we could change this to call
-          //
-          //         intersect(bounding_box(current_node), origin, direction, result)
-          //
-          //     This would require the bounding_box_type to know about about Us
-          //     It would also complicate how to implement the one_over_direction optimization
-          //if(intersect_box(bounding_box(current_node), origin, one_over_direction, interval)) // XXX how to implement this?
-          if(compare(bounding_box(current_node).intersect(origin, direction, result), result))
+          if(!compare(result, intersect_box(bounding_box(current_node), origin, one_over_direction)))
           {
             // push children to stack 
             stack.push(current_node->left_child_);
@@ -253,6 +294,29 @@ class bounding_box_hierarchy
 
       bool hit = t_near <= t_far;
       return hit && interval[0] <= t_far && t_near <= interval[1];
+    }
+
+
+    template<class Point, class Vector>
+    static float intersect_box(const bounding_box_type& box,
+                               Point origin,
+                               Vector one_over_direction)
+    {
+      Point t_min3, t_max3;
+      for(int i = 0; i < 3; ++i)
+      {
+        t_min3[i] = (box[0][i] - origin[i]) * one_over_direction[i];
+        t_max3[i] = (box[1][i] - origin[i]) * one_over_direction[i];
+      }
+
+      Point t_near3{std::min(t_min3[0], t_max3[0]), std::min(t_min3[1], t_max3[1]), std::min(t_min3[2], t_max3[2])};
+      Point t_far3{ std::max(t_min3[0], t_max3[0]), std::max(t_min3[1], t_max3[1]), std::max(t_min3[2], t_max3[2])};
+
+      auto t_near = std::max(std::max(t_near3[0], t_near3[1]), t_near3[2]);
+      auto t_far  = std::min(std::min(t_far3[0],  t_far3[1]),  t_far3[2]);
+
+      bool hit = t_near <= t_far && 0.f <= t_far && t_near <= 1.f;
+      return hit ? t_near : 1.f;
     }
 
 
