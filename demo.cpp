@@ -200,14 +200,14 @@ double measure_performance(const Hierarchy& hierarchy, const std::vector<ray>& r
   // warm up
   for(const auto& r : rays)
   {
-    hierarchy.intersect(r.first, r.second);
+    hierarchy.intersect3(r.first, r.second, 1.f);
   }
 
   size_t milliseconds = time_invocation_in_milliseconds(20, [&]
   {
     for(const auto& r : rays)
     {
-      hierarchy.intersect(r.first, r.second);
+      hierarchy.intersect3(r.first, r.second, 1.f);
     }
   });
 
@@ -240,15 +240,15 @@ int main()
   auto triangles = random_triangles_in_unit_cube(num_triangles, rng());
   auto rays = random_rays_in_unit_cube(num_rays, rng());
 
-  std::cout << "timing bounding box hierarchy: " << std::endl;
+  std::cout << "timing exhaustive_searcher: " << std::endl;
+  exhaustive_searcher<triangle> es(triangles);
+  auto es_rays_per_second = measure_performance(es, rays);
+  std::cout << "exhaustive_searcher: " << es_rays_per_second << " rays/s" << std::endl;
+
+  std::cout << "timing bounding_box_hierarchy: " << std::endl;
   bounding_box_hierarchy<triangle> bbh(triangles);
   auto bbh_rays_per_second = measure_performance(bbh, rays);
   std::cout << "bounding_box_hierarchy: " << bbh_rays_per_second << " rays/s" << std::endl;
-
-  //std::cout << "timing bounding volume hierarchy: " << std::endl;
-  //bounding_volume_hierarchy<triangle> bvh(triangles);
-  //auto bvh_rays_per_second = measure_performance(bvh, rays);
-  //std::cout << "bounding_volume_hierarchy: " << bvh_rays_per_second << " rays/s" << std::endl;
 
   std::cout << "OK" << std::endl;
 
