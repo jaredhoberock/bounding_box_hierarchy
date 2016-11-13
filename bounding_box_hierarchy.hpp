@@ -58,13 +58,25 @@ class bounding_box_hierarchy
       }
     };
 
+
+    struct select_bounding_box_type
+    {
+      // if U::bounding_box() exists, use its type as the bounding box type
+      template<class U>
+      static auto test(int) -> decltype(std::declval<U>().bounding_box());
+
+      // otherwise, a bounding box is an array of two arrays of three floats
+      template<class>
+      static std::array<std::array<float,3>,2> test(...);
+
+      using type = decltype(test<T>(0));
+    };
+
+
   public:
     using element_type = T;
 
-
-    // a bounding box is an array of two arrays of three floats
-    // XXX if T::bounding_box() exists, we should use its result for our bounding_box_type
-    using bounding_box_type = std::array<std::array<float,3>,2>;
+    using bounding_box_type = typename select_bounding_box_type::type;
 
 
     template<class ContiguousRange,
@@ -206,9 +218,9 @@ class bounding_box_hierarchy
       float inf = std::numeric_limits<float>::infinity();
       bounding_box_type result{{{inf, inf, inf}, {-inf, -inf, -inf}}};
           
-      for(std::vector<size_t>::iterator t = begin; t != end; ++t)
+      for(std::vector<size_t>::iterator e = begin; e != end; ++e)
       {
-        auto bounding_box = bounder(elements[*t]);
+        auto bounding_box = bounder(elements[*e]);
 
         for(int i = 0; i < 3; ++i)
         {
