@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <tuple>
+
 template<class T>
 class exhaustive_searcher
 {
@@ -47,9 +50,9 @@ class exhaustive_searcher
     template<class Point, class Vector, class U,
              class Function1 = call_member_intersect,
              class Function2 = default_projection>
-    U intersect3(Point origin, Vector direction, U init,
-                 Function1 intersector = call_member_intersect(),
-                 Function2 hit_time = default_projection()) const
+    U intersect(Point origin, Vector direction, U init,
+                Function1 intersector = call_member_intersect(),
+                Function2 hit_time = default_projection()) const
     {
       U result = init;
       auto result_t = hit_time(result);

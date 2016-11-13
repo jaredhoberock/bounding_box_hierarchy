@@ -172,7 +172,7 @@ std::vector<intersection_type> find_intersections(const std::vector<triangle>& t
     intersection_type init(1.f, nullptr);
 
     // use a custom intersection functor to return the hit time and a pointer to the triangle
-    auto intersection = searcher.intersect3(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
+    auto intersection = searcher.intersect(ray.first, ray.second, init, [](const auto& tri, const auto& o, const auto& d, intersection_type nearest)
     {
       return intersection_type(tri.intersect(o,d,nearest.first), &tri);
     });
@@ -200,14 +200,14 @@ double measure_performance(const Hierarchy& hierarchy, const std::vector<ray>& r
   // warm up
   for(const auto& r : rays)
   {
-    hierarchy.intersect3(r.first, r.second, 1.f);
+    hierarchy.intersect(r.first, r.second, 1.f);
   }
 
   size_t milliseconds = time_invocation_in_milliseconds(20, [&]
   {
     for(const auto& r : rays)
     {
-      hierarchy.intersect3(r.first, r.second, 1.f);
+      hierarchy.intersect(r.first, r.second, 1.f);
     }
   });
 

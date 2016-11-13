@@ -85,9 +85,9 @@ class bounding_box_hierarchy
     template<class Point, class Vector, class U,
              class Function1 = call_member_intersect,
              class Function2 = default_projection>
-    U intersect3(Point origin, Vector direction, U init,
-                 Function1 intersector = call_member_intersect(),
-                 Function2 hit_time = default_projection()) const
+    U intersect(Point origin, Vector direction, U init,
+                Function1 intersector = call_member_intersect(),
+                Function2 hit_time = default_projection()) const
     {
       U result = init;
       auto result_t = hit_time(result);
@@ -124,120 +124,6 @@ class bounding_box_hierarchy
             // push children to stack 
             stack.push(current_node->left_child_);
             stack.push(current_node->right_child_);
-          }
-        }
-      }
-
-      return result;
-    }
-
-
-    // intersect() is a reduction -- it reduces the collection of Ts into the single earliest intersection, if one exists.
-    // if an intersection does not exist, the result is init
-    // if intersector() just returns a float representing a "hit time", then init can be initialized to NaN, 1.f, or infinity
-    // U should really be the result of intersector, but because init comes before intersector in the parameter list,
-    // we can't get it
-    template<class Point, class Vector, class U,
-             class Function = call_member_intersect,
-             class BinaryFunction = std::less<>>
-    U intersect2(Point origin, Vector direction, U init,
-                 Function intersector = call_member_intersect(),
-                 BinaryFunction compare = std::less<>()) const
-    {
-      U result = init;
-
-      Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
-
-      using stack_type = short_stack<const node*,64>;
-
-      stack_type stack;
-      stack.push(root_node());
-
-      while(!stack.empty())
-      {
-        const node* current_node = stack.top();
-        stack.pop();
-
-        if(is_leaf(current_node))
-        {
-          // we pass result to intersector() to implement things like
-          // * mailboxing
-          // * ray intervals
-          auto current_result = intersector(element(current_node), origin, direction, result);
-          result = std::min(result, current_result, compare);
-        }
-        else
-        {
-          if(!compare(result, intersect_box(bounding_box(current_node), origin, one_over_direction)))
-          {
-            // push children to stack 
-            stack.push(current_node->left_child_);
-            stack.push(current_node->right_child_);
-          }
-        }
-      }
-
-      return result;
-    }
-
-
-    /// Finds the nearest intersection, if any, between a ray and the elements of this bounding_volume_hierarchy.
-    /// \param origin The ray's origin.
-    /// \param direction The ray's direction.
-    /// \param interval The parametric ray interval to consider. Defaults to [0,1).
-    /// \param intersector A function to test for intersection between a ray and element.
-    ///                    Signature is expected to be result_type intersector(T,Point,Direction,Interval). Defaults to `T::intersect()`.
-    /// \param hit_time A function to return the value of the ray parameter at the time of an intersection.
-    ///                 Signature is expected to be `float hit_time(result_type)`, where `result_type` is the type returned by `intersector`.
-    ///                 By default, this function converts `result_type` to `float`.
-    /// \return The nearest result of `intersector` along the ray, if an intersection exists. Empty, otherwise.
-    //
-    // XXX maybe the default hit_time should be to call result_type::hit_time() if result_type is not convertible to float?
-    // XXX another default could be to call std::get<float>() in case the intersection type is tuple-like
-    template<class Point, class Vector,
-             class Interval = std::array<float,2>,
-             class Function1 = call_member_intersect,
-             class Function2 = default_projection>
-    std::result_of_t<Function1(T,Point,Vector,Interval)>
-      intersect(Point origin, Vector direction,
-                Interval interval = Interval{0.f, 1.f},
-                Function1 intersector = call_member_intersect(),
-                Function2 hit_time = default_projection()) const
-    {
-      Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
-
-      std::result_of_t<Function1(T,Point,Vector,Interval)> result;
-
-      using stack_type = short_stack<const node*,64>;
-
-      stack_type stack;
-      stack.push(root_node());
-
-      while(!stack.empty())
-      {
-        const node* current_node = stack.top();
-        stack.pop();
-
-        if(!is_leaf(current_node))
-        {
-          if(intersect_box(bounding_box(current_node), origin, one_over_direction, interval))
-          {
-            // push children to stack 
-            stack.push(current_node->left_child_);
-            stack.push(current_node->right_child_);
-          }
-        }
-        else
-        {
-          auto current_result = intersector(element(current_node), origin, direction, interval);
-          
-          if(current_result)
-          {
-            // shorten interval
-            interval[1] = hit_time(*current_result);
-
-            // update result
-            result = *current_result;
           }
         }
       }
@@ -285,28 +171,6 @@ class bounding_box_hierarchy
         U* top_;
     };
 
-    template<class Point, class Vector, class Interval>
-    static bool intersect_box(const bounding_box_type& box,
-                              Point origin,
-                              Vector one_over_direction,
-                              Interval interval)
-    {
-      Point t_min3, t_max3;
-      for(int i = 0; i < 3; ++i)
-      {
-        t_min3[i] = (box[0][i] - origin[i]) * one_over_direction[i];
-        t_max3[i] = (box[1][i] - origin[i]) * one_over_direction[i];
-      }
-
-      Point t_near3{std::min(t_min3[0], t_max3[0]), std::min(t_min3[1], t_max3[1]), std::min(t_min3[2], t_max3[2])};
-      Point t_far3{ std::max(t_min3[0], t_max3[0]), std::max(t_min3[1], t_max3[1]), std::max(t_min3[2], t_max3[2])};
-
-      auto t_near = std::max(std::max(t_near3[0], t_near3[1]), t_near3[2]);
-      auto t_far  = std::min(std::min(t_far3[0],  t_far3[1]),  t_far3[2]);
-
-      bool hit = t_near <= t_far;
-      return hit && interval[0] <= t_far && t_near <= interval[1];
-    }
 
     template<class Point, class Vector>
     static float intersect_box(const bounding_box_type& box,
@@ -329,15 +193,6 @@ class bounding_box_hierarchy
 
       bool hit = t_near <= t_far && 0.f <= t_far && t_near <= t_bound;
       return hit ? t_near : t_bound;
-    }
-
-
-    template<class Point, class Vector>
-    static float intersect_box(const bounding_box_type& box,
-                               Point origin,
-                               Vector one_over_direction)
-    {
-      return intersect_box(box, origin, one_over_direction, 1.f);
     }
 
 
