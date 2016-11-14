@@ -149,7 +149,7 @@ class bounding_volume_hierarchy
       auto t_far  = std::min(std::min(t_far3[0],  t_far3[1]),  t_far3[2]);
 
       bool hit = t_near <= t_far;
-      return hit && interval[0] <= t_far && t_near <= interval[1];
+      return hit && interval[0] <= t_far && t_near < interval[1];
     }
 
 

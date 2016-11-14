@@ -197,13 +197,18 @@ class bounding_box_hierarchy
         t_max3[i] = (box[1][i] - origin[i]) * one_over_direction[i];
       }
 
-      Point t_near3{std::min(t_min3[0], t_max3[0]), std::min(t_min3[1], t_max3[1]), std::min(t_min3[2], t_max3[2])};
-      Point t_far3{ std::max(t_min3[0], t_max3[0]), std::max(t_min3[1], t_max3[1]), std::max(t_min3[2], t_max3[2])};
+      Point t_near3{std::min(t_min3[0], t_max3[0]),
+                    std::min(t_min3[1], t_max3[1]),
+                    std::min(t_min3[2], t_max3[2])};
+
+      Point  t_far3{std::max(t_min3[0], t_max3[0]),
+                    std::max(t_min3[1], t_max3[1]),
+                    std::max(t_min3[2], t_max3[2])};
 
       auto t_near = std::max(std::max(t_near3[0], t_near3[1]), t_near3[2]);
-      auto t_far  = std::min(std::min(t_far3[0],  t_far3[1]),  t_far3[2]);
+      auto t_far  = std::min(std::min( t_far3[0],  t_far3[1]),  t_far3[2]);
 
-      bool hit = t_near <= t_far && 0.f <= t_far && t_near <= t_bound;
+      bool hit = t_near <= t_far && 0.f <= t_far && t_near < t_bound;
       return hit ? t_near : t_bound;
     }
 
