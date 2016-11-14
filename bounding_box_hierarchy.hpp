@@ -106,6 +106,7 @@ class bounding_box_hierarchy
       auto result_t = hit_time(result);
 
       Vector one_over_direction = {1.f/direction[0], 1.f/direction[1], 1.f/direction[2]};
+      std::array<bool,3> is_negative{{std::signbit(direction[0]), std::signbit(direction[1]), std::signbit(direction[2])}};
 
       using stack_type = short_stack<const node*,64>;
 
@@ -132,7 +133,7 @@ class bounding_box_hierarchy
         }
         else
         {
-          if(intersect_box(bounding_box(current_node), origin, one_over_direction, result_t))
+          if(intersect_box(bounding_box(current_node), origin, one_over_direction, is_negative, result_t))
           {
             // push children to stack 
             stack.push(current_node->left_child_);
@@ -184,25 +185,39 @@ class bounding_box_hierarchy
         U* top_;
     };
 
-
     template<class Point, class Vector>
     static bool intersect_box(const bounding_box_type& box,
                               Point origin,
                               Vector one_over_direction,
+                              const std::array<bool,3>& is_negative,
                               float t_bound)
     {
-      for(int i = 0; i < 3; ++i)
-      {
-        float t_near = (box[0][i] - origin[i]) * one_over_direction[i];
-        float t_far  = (box[1][i] - origin[i]) * one_over_direction[i];
+      float tmin = (box[is_negative[0]][0] - origin[0]) * one_over_direction[0];
+      float tmax = (box[1 - is_negative[0]][0] - origin[0]) * one_over_direction[0];
 
-        if(t_near > t_far) std::swap(t_near, t_far);
-        float t0 = t_near > 0.f ? t_near : 0.f;
-        float t1 = t_far < t_bound ? t_far : t_bound;
-        if(t0 > t1) return false;
+      float tymin = (box[is_negative[1]][1] - origin[1]) * one_over_direction[1];
+      float tymax = (box[1 - is_negative[1]][1] - origin[1]) * one_over_direction[1];
+
+      if(tmin > tymax || tymin > tmax)
+      {
+        return false;
       }
 
-      return true;
+      if(tymin > tmin) tmin = tymin;
+      if(tymax < tmax) tmax = tymax;
+
+      float tzmin = (box[is_negative[2]][2] - origin[2]) * one_over_direction[2];
+      float tzmax = (box[1 - is_negative[2]][2] - origin[2]) * one_over_direction[2];
+
+      if(tmin > tzmax || tzmin > tmax)
+      {
+        return false;
+      }
+
+      if(tzmin > tmin) tmin = tzmin;
+      if(tzmax < tmax) tmax = tzmax;
+
+      return tmin < t_bound && tmax >= 0.f;
     }
 
 
