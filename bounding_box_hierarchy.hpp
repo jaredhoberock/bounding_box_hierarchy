@@ -185,31 +185,23 @@ class bounding_box_hierarchy
 
 
     template<class Point, class Vector>
-    static float intersect_box(const bounding_box_type& box,
-                               Point origin,
-                               Vector one_over_direction,
-                               float t_bound)
+    static bool intersect_box(const bounding_box_type& box,
+                              Point origin,
+                              Vector one_over_direction,
+                              float t_bound)
     {
-      Point t_min3, t_max3;
       for(int i = 0; i < 3; ++i)
       {
-        t_min3[i] = (box[0][i] - origin[i]) * one_over_direction[i];
-        t_max3[i] = (box[1][i] - origin[i]) * one_over_direction[i];
+        float t_near = (box[0][i] - origin[i]) * one_over_direction[i];
+        float t_far  = (box[1][i] - origin[i]) * one_over_direction[i];
+
+        if(t_near > t_far) std::swap(t_near, t_far);
+        float t0 = t_near > 0.f ? t_near : 0.f;
+        float t1 = t_far < t_bound ? t_far : t_bound;
+        if(t0 > t1) return false;
       }
 
-      Point t_near3{std::min(t_min3[0], t_max3[0]),
-                    std::min(t_min3[1], t_max3[1]),
-                    std::min(t_min3[2], t_max3[2])};
-
-      Point  t_far3{std::max(t_min3[0], t_max3[0]),
-                    std::max(t_min3[1], t_max3[1]),
-                    std::max(t_min3[2], t_max3[2])};
-
-      auto t_near = std::max(std::max(t_near3[0], t_near3[1]), t_near3[2]);
-      auto t_far  = std::min(std::min( t_far3[0],  t_far3[1]),  t_far3[2]);
-
-      bool hit = t_near <= t_far && 0.f <= t_far && t_near < t_bound;
-      return hit ? t_near : t_bound;
+      return true;
     }
 
 
@@ -260,8 +252,8 @@ class bounding_box_hierarchy
 
       bool operator()(const size_t lhs, const size_t rhs) const
       {
-        auto lhs_val = bounder(elements[lhs])[0][axis];
-        auto rhs_val = bounder(elements[rhs])[0][axis];
+        auto lhs_val = centroid(bounder(elements[lhs]))[axis];
+        auto rhs_val = centroid(bounder(elements[rhs]))[axis];
 
         return lhs_val < rhs_val;
       }
@@ -305,6 +297,14 @@ class bounding_box_hierarchy
           bounding_box_(bounding_box)
       {}
     };
+
+    static std::array<float,3> centroid(const bounding_box_type& box)
+    {
+      std::array<float,3> result{(box[1][0] + box[0][0])/2,
+                                 (box[1][1] + box[0][1])/2,
+                                 (box[1][2] + box[0][2])/2};
+      return result;
+    }
 
 
     template<class ContiguousRange, class Bounder>
