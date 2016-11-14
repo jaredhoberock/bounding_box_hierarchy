@@ -9,7 +9,7 @@
 #include <tuple>
 
 #include "memoized_bounder.hpp"
-#include "optional.hpp"
+#include "partitioner.hpp"
 
 
 // XXX the template parameter list might go something like this:
@@ -80,11 +80,12 @@ class bounding_box_hierarchy
 
 
     template<class ContiguousRange,
-             class Bounder = call_member_bounding_box>
+             class Bounder = call_member_bounding_box,
+             class Partitioner = partition_largest_axis_at_median_element>
     bounding_box_hierarchy(const ContiguousRange& elements,
                            Bounder bounder = call_member_bounding_box(),
-                           float epsilon = std::numeric_limits<float>::epsilon())
-      : nodes_(make_tree(elements, bounder, epsilon))
+                           Partitioner partitioner = partition_largest_axis_at_median_element())
+      : nodes_(make_tree(elements, bounder, partitioner))
     {}
 
 
@@ -205,19 +206,17 @@ class bounding_box_hierarchy
     }
 
 
-    template<class ContiguousRange, class Bounder>
+    template<class IndirectBounder>
     static bounding_box_type bounding_box(const std::vector<size_t>::iterator begin,
                                           const std::vector<size_t>::iterator end,
-                                          const ContiguousRange& elements,
-                                          Bounder bounder,
-                                          float epsilon)
+                                          IndirectBounder bounder)
     {
       float inf = std::numeric_limits<float>::infinity();
       bounding_box_type result{{{inf, inf, inf}, {-inf, -inf, -inf}}};
           
       for(std::vector<size_t>::iterator e = begin; e != end; ++e)
       {
-        auto bounding_box = bounder(elements[*e]);
+        auto bounding_box = bounder(*e);
 
         for(int i = 0; i < 3; ++i)
         {
@@ -226,60 +225,7 @@ class bounding_box_hierarchy
         }
       }
 
-      // widen the bounding box by 2*epsilon
-      // XXX might want to instead ensure that each side is at least epsilon in width
-      // this ensures that axis-aligned elements always
-      // lie strictly within the bounding box
-      for(size_t i = 0; i != 3; ++i)
-      {
-        result[0][i] -= epsilon;
-        result[1][i] += epsilon;
-      }
-
       return result;
-    }
-
-
-    template<typename Bounder>
-    struct sort_bounding_boxes_by_axis
-    {
-      template<class ContiguousRange>
-      sort_bounding_boxes_by_axis(const size_t axis_,
-                                  const ContiguousRange& elements_,
-                                  Bounder bounder_)
-        :axis(axis_),elements(&*elements_.begin()),bounder(bounder_)
-      {}
-
-      bool operator()(const size_t lhs, const size_t rhs) const
-      {
-        auto lhs_val = centroid(bounder(elements[lhs]))[axis];
-        auto rhs_val = centroid(bounder(elements[rhs]))[axis];
-
-        return lhs_val < rhs_val;
-      }
-
-      size_t axis;
-      const T* elements;
-      Bounder bounder;
-    };
-
-
-    static size_t largest_axis(const bounding_box_type& box)
-    {
-      // find the largest dimension of the box
-      size_t axis = 0;
-      float largest_length = -std::numeric_limits<float>::infinity();
-      for(size_t i = 0; i < 3; ++i)
-      {
-        float length = box[1][i] - box[0][i];
-        if(length > largest_length)
-        {
-          largest_length = length;
-          axis = i;
-        }
-      }
-
-      return axis;
     }
 
 
@@ -298,22 +244,38 @@ class bounding_box_hierarchy
       {}
     };
 
-    static std::array<float,3> centroid(const bounding_box_type& box)
+    template<class Bounder>
+    struct indirect_bounder
     {
-      std::array<float,3> result{(box[1][0] + box[0][0])/2,
-                                 (box[1][1] + box[0][1])/2,
-                                 (box[1][2] + box[0][2])/2};
-      return result;
+      template<class ContiguousRange>
+      indirect_bounder(Bounder bounder_, const ContiguousRange& elements)
+        : bounder(bounder_),
+          data(&*elements.begin())
+      {}
+
+      auto operator()(size_t element_idx) const
+      {
+        return bounder(data[element_idx]);
+      }
+
+      Bounder bounder;
+      const T* data;
+    };
+
+    template<class Bounder, class ContiguousRange>
+    static indirect_bounder<Bounder> make_indirect_bounder(Bounder bounder, const ContiguousRange& elements)
+    {
+      return indirect_bounder<Bounder>(bounder, elements);
     }
 
 
-    template<class ContiguousRange, class Bounder>
+    template<class ContiguousRange, class IndirectBounder, class Partitioner>
     static const node* make_tree_recursive(std::vector<node>& tree,
                                            std::vector<size_t>::iterator begin,
                                            std::vector<size_t>::iterator end,
                                            const ContiguousRange& elements,
-                                           Bounder bounder,
-                                           float epsilon)
+                                           IndirectBounder bounder,
+                                           Partitioner partitioner)
     {
       if(begin + 1 == end)
       {
@@ -322,19 +284,14 @@ class bounding_box_hierarchy
       }
 
       // find the bounding box of the elements
-      bounding_box_type box = bounding_box(begin, end, elements, bounder, epsilon);
+      bounding_box_type box = bounding_box(begin, end, bounder);
 
-      // create an ordering
-      sort_bounding_boxes_by_axis<Bounder> compare(largest_axis(box),elements,bounder);
-      
-      // sort the median
-      std::vector<size_t>::iterator split = begin + (end - begin) / 2;
-
-      std::nth_element(begin, split, end, compare);
+      // partition the elements into two sets
+      std::vector<size_t>::iterator split = partitioner(begin, end, box, bounder);
 
       // build subtrees
-      const node* left_child  = make_tree_recursive(tree, begin, split, elements, bounder, epsilon);
-      const node* right_child = make_tree_recursive(tree, split, end,   elements, bounder, epsilon);
+      const node* left_child  = make_tree_recursive(tree, begin, split, elements, bounder, partitioner);
+      const node* right_child = make_tree_recursive(tree, split, end,   elements, bounder, partitioner);
 
       // create a new node
       tree.emplace_back(left_child, right_child, box);
@@ -342,8 +299,8 @@ class bounding_box_hierarchy
     }
 
 
-    template<class ContiguousRange, class Bounder>
-    static std::vector<node> make_tree(const ContiguousRange& elements, Bounder bounder, float epsilon)
+    template<class ContiguousRange, class Bounder, class Partitioner>
+    static std::vector<node> make_tree(const ContiguousRange& elements, Bounder bounder, Partitioner partitioner)
     {
       // we will sort an array of indices
       std::vector<size_t> indices(elements.size());
@@ -356,8 +313,11 @@ class bounding_box_hierarchy
       // memoize the bound function
       memoized_bounder<T,Bounder> memoized_bounder(elements, bounder);
 
+      // add indirection to the bound function
+      auto indirect_bounder = make_indirect_bounder(std::ref(memoized_bounder), elements);
+
       // recurse
-      make_tree_recursive(tree, indices.begin(), indices.end(), elements, std::ref(memoized_bounder), epsilon);
+      make_tree_recursive(tree, indices.begin(), indices.end(), elements, indirect_bounder, partitioner);
 
       assert(tree.size() == elements.size() - 1);
 
