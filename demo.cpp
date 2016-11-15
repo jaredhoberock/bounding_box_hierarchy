@@ -4,9 +4,8 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
-#include <chrono>
+#include <cassert>
 
-#include "bounding_volume_hierarchy.hpp"
 #include "bounding_box_hierarchy.hpp"
 #include "exhaustive_searcher.hpp"
 #include "time_invocation.hpp"
@@ -84,12 +83,6 @@ struct triangle : std::array<point,3>
     }
 
     return std::min(nearest, t);
-  }
-
-  std::experimental::optional<float> intersect(const point& origin, const point& direction, const std::array<float,2>& interval) const
-  {
-    float t = intersect(origin, direction, interval[1]);
-    return t < interval[1] ? std::experimental::make_optional(t) : std::experimental::nullopt;
   }
 
   std::array<point,2> bounding_box() const
