@@ -12,9 +12,6 @@
 #include "partitioner.hpp"
 
 
-// XXX the template parameter list might go something like this:
-//
-// template<class T, class Volume = default_bounding_box_type, class Function = default_bounding_volume_intersector>
 template<class T>
 class bounding_box_hierarchy
 {
@@ -81,10 +78,10 @@ class bounding_box_hierarchy
 
     template<class ContiguousRange,
              class Bounder = call_member_bounding_box,
-             class Partitioner = partition_largest_axis_at_median_element>
+             class Partitioner = minimize_surface_area_heuristic>
     bounding_box_hierarchy(const ContiguousRange& elements,
                            Bounder bounder = call_member_bounding_box(),
-                           Partitioner partitioner = partition_largest_axis_at_median_element())
+                           Partitioner partitioner = minimize_surface_area_heuristic())
       : nodes_(make_tree(elements, bounder, partitioner))
     {}
 
@@ -333,8 +330,6 @@ class bounding_box_hierarchy
 
       // recurse
       make_tree_recursive(tree, indices.begin(), indices.end(), elements, indirect_bounder, partitioner);
-
-      assert(tree.size() == elements.size() - 1);
 
       return tree;
     }
