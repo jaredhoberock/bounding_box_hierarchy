@@ -159,8 +159,6 @@ struct minimize_surface_area_heuristic
   template<class Iterator, class BoundingBox, class Bounder>
   Iterator operator()(Iterator first, Iterator last, const BoundingBox& box, Bounder bounder) const
   {
-    size_t num_elements = last - first;
-
     // compute the bounding box of elements' centroids
     BoundingBox centroid_bounding_box = empty_box<BoundingBox>();
     for(Iterator i = first; i != last; ++i)
@@ -168,50 +166,48 @@ struct minimize_surface_area_heuristic
       centroid_bounding_box = add_point_to_bounding_box(centroid_bounding_box, centroid(bounder(*i)));
     }
 
-    // select an axis to split
-    int axis = largest_axis(box);
-
-    float buckets_min = centroid_bounding_box[0][axis];
-    float buckets_max = centroid_bounding_box[1][axis];
-
-    constexpr size_t num_buckets = 10;
-    float bucket_width = (buckets_max - buckets_min) / num_buckets;
-
     struct bucket
     {
       float cost;
+      int axis;
       float centroid;
       size_t num_elements_in_left_partition;
       BoundingBox left_box;
       BoundingBox right_box;
 
       bucket()
-        : cost{}, centroid{}, num_elements_in_left_partition(0),
+        : num_elements_in_left_partition(0),
           left_box(empty_box<BoundingBox>()),
           right_box(empty_box<BoundingBox>())
       {}
 
-      bool operator<(const bucket& other)
+      bool operator<(const bucket& other) const
       {
         return cost < other.cost;
       }
     };
 
     // initialize buckets' centroids
-    std::array<bucket, num_buckets> buckets;
-    buckets[0].centroid = buckets_min + bucket_width/2;
-    for(int i = 1; i < buckets.size(); ++i)
-    {
-      // each bucket's centroid is at an offset bucket_width from the previous
-      buckets[i].centroid = buckets[i-1].centroid + bucket_width;
-    }
+    constexpr size_t num_buckets_per_axis = 10;
+    std::array<bucket, 3 * num_buckets_per_axis> buckets;
 
-    if(buckets.front().centroid == buckets.back().centroid)
+    for(int axis = 0; axis < 3; ++axis)
     {
-      // in this degenerate case, we weren't able to subdivide the space
-      // as a consequence, we will not be able to partition elements into exactly two sets
-      // so use a different partitioning strategy
-      return partition_largest_axis_at_median_element()(first, last, box, bounder);
+      int axis_begin = axis * num_buckets_per_axis;
+      int axis_end = axis_begin + num_buckets_per_axis;
+
+      float buckets_min = centroid_bounding_box[0][axis];
+      float buckets_max = centroid_bounding_box[1][axis];
+      float bucket_width = (buckets_max - buckets_min) / num_buckets_per_axis;
+
+      buckets[axis_begin].axis = axis;
+      buckets[axis_begin].centroid = buckets_min + bucket_width/2;
+      for(int i = axis_begin + 1; i < axis_end; ++i)
+      {
+        // each bucket's centroid is at an offset bucket_width from the previous
+        buckets[i].axis = axis;
+        buckets[i].centroid = buckets[i-1].centroid + bucket_width;
+      }
     }
 
     for(Iterator i = first; i != last; ++i)
@@ -222,7 +218,7 @@ struct minimize_surface_area_heuristic
       // for each bucket, find which side of centroid element i falls into
       for(bucket& b : buckets)
       {
-        if(this_centroid[axis] < b.centroid)
+        if(this_centroid[b.axis] < b.centroid)
         {
           b.left_box = combine_bounding_boxes(b.left_box, this_box);
           ++b.num_elements_in_left_partition;
@@ -233,6 +229,8 @@ struct minimize_surface_area_heuristic
         }
       }
     }
+
+    size_t num_elements = last - first;
 
     // compute the cost of partitioning the elements at each bucket's centroid 
     for(bucket& b : buckets)
@@ -246,28 +244,26 @@ struct minimize_surface_area_heuristic
       b.cost = left_area * float(b.num_elements_in_left_partition) + right_area * float(num_elements_in_right_partition);
     }
 
-    // find the bucket which produces non-empty partitions with the smallest traversal cost
-    std::sort(buckets.begin(), buckets.end());
-    int bucket = -1;
-    for(int i = 0; i < buckets.size(); ++i)
+    // remove buckets which have a NaN cost or which produce partitions with empty sets
+    auto valid_buckets_end = std::remove_if(buckets.begin(), buckets.end(), [=](const bucket& b)
     {
-      if(buckets[i].num_elements_in_left_partition > 0 && buckets[i].num_elements_in_left_partition != num_elements)
-      {
-        bucket = i;
-        break;
-      }
-    }
+      return (b.cost != b.cost) || (b.num_elements_in_left_partition == 0) || (b.num_elements_in_left_partition == num_elements);
+    });
 
-    if(bucket == -1)
+    if(buckets.begin() == valid_buckets_end)
     {
       // we weren't able to partition the elements into exactly two subsets, so use a different partitioning strategy
       return partition_largest_axis_at_median_element()(first, last, box, bounder);
     }
 
+    // select the bucket with minimal splitting cost
+    auto selected_bucket = std::min_element(buckets.begin(), valid_buckets_end);
+
     // partition the elements based on whether their centroids are on the left or the right of the selected bucket's centroid
     return std::partition(first, last, [&](const auto& element)
     {
-      return centroid(bounder(element))[axis] < buckets[bucket].centroid;
+      int axis = selected_bucket->axis;
+      return centroid(bounder(element))[axis] < selected_bucket->centroid;
     });
   }
 };
