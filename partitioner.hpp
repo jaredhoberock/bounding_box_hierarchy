@@ -1,9 +1,8 @@
 #pragma once
 
-#include <utility>
-#include <iterator>
-#include <type_traits>
+#include <array>
 #include <algorithm>
+#include <limits>
 
 
 struct partition_largest_axis_at_middle_element
@@ -168,7 +167,7 @@ struct minimize_surface_area_heuristic
       }
     };
 
-    // initialize buckets' centroids
+    // initialize buckets' axes and centroids
     constexpr size_t num_buckets_per_axis = 10;
     std::array<bucket, 3 * num_buckets_per_axis> buckets;
 
@@ -196,7 +195,7 @@ struct minimize_surface_area_heuristic
       auto this_box = bounder(*i);
       auto this_centroid = centroid(this_box);
 
-      // for each bucket, find which side of centroid element i falls into
+      // for each bucket, find which side of its centroid element i falls into
       for(bucket& b : buckets)
       {
         if(this_centroid[b.axis] < b.centroid)
