@@ -6,77 +6,38 @@
 #include <algorithm>
 
 
-template<class BoundingBox>
-BoundingBox empty_box()
+struct partition_largest_axis_at_middle_element
 {
-  float inf = std::numeric_limits<float>::infinity();
-  BoundingBox result{{{inf, inf, inf}, {-inf, -inf, -inf}}};
-  return result;
-}
-
-
-template<class BoundingBox>
-BoundingBox combine_bounding_boxes(const BoundingBox& a, const BoundingBox& b)
-{
-  BoundingBox result = a;
-
-  for(int i = 0; i < 3; ++i)
+  template<class BoundingBox>
+  static std::array<float,3> centroid(const BoundingBox& box)
   {
-    result[0][i] = std::min(result[0][i], b[0][i]);
-    result[1][i] = std::max(result[1][i], b[1][i]);
+    std::array<float,3> result{(box[1][0] + box[0][0])/2,
+                               (box[1][1] + box[0][1])/2,
+                               (box[1][2] + box[0][2])/2};
+    return result;
   }
 
-  return result;
-}
 
-
-template<class BoundingBox, class Point>
-BoundingBox add_point_to_bounding_box(const BoundingBox& b, const Point& p)
-{
-  BoundingBox result = b;
-
-  for(int i = 0; i < 3; ++i)
+  template<class BoundingBox>
+  static size_t largest_axis(const BoundingBox& box)
   {
-    result[0][i] = std::min(result[0][i], p[i]);
-    result[1][i] = std::max(result[1][i], p[i]);
-  }
-
-  return result;
-}
-
-
-template<class BoundingBox>
-static std::array<float,3> centroid(const BoundingBox& box)
-{
-  std::array<float,3> result{(box[1][0] + box[0][0])/2,
-                             (box[1][1] + box[0][1])/2,
-                             (box[1][2] + box[0][2])/2};
-  return result;
-}
-
-
-template<class BoundingBox>
-size_t largest_axis(const BoundingBox& box)
-{
-  // find the largest dimension of the box
-  size_t axis = 0;
-  float largest_length = -std::numeric_limits<float>::infinity();
-  for(size_t i = 0; i < 3; ++i)
-  {
-    float length = box[1][i] - box[0][i];
-    if(length > largest_length)
+    // find the largest dimension of the box
+    size_t axis = 0;
+    float largest_length = -std::numeric_limits<float>::infinity();
+    for(size_t i = 0; i < 3; ++i)
     {
-      largest_length = length;
-      axis = i;
+      float length = box[1][i] - box[0][i];
+      if(length > largest_length)
+      {
+        largest_length = length;
+        axis = i;
+      }
     }
+  
+    return axis;
   }
 
-  return axis;
-}
 
-
-struct partition_largest_axis_at_median_element
-{
   template<typename Bounder>
   struct sort_bounding_boxes_by_axis
   {
@@ -99,8 +60,11 @@ struct partition_largest_axis_at_median_element
 
 
   template<class Iterator, class BoundingBox, class Bounder>
-  Iterator operator()(Iterator first, Iterator middle, Iterator last, const BoundingBox& box, Bounder bounder) const
+  Iterator operator()(Iterator first, Iterator last, const BoundingBox& box, Bounder bounder) const
   {
+    // split at middle element
+    Iterator middle = first + (last - first) / 2;
+
     // create an ordering
     sort_bounding_boxes_by_axis<Bounder> compare(largest_axis(box), bounder);
 
@@ -108,39 +72,56 @@ struct partition_largest_axis_at_median_element
 
     return middle;
   }
-
-
-  template<class Iterator, class BoundingBox, class Bounder>
-  Iterator operator()(Iterator first, Iterator last, const BoundingBox& box, Bounder bounder) const
-  {
-    // split at median element
-    Iterator split = first + (last - first) / 2;
-
-    return operator()(first, split, last, box, bounder);
-  }
 };
 
 
 struct minimize_surface_area_heuristic
 {
-  template<class Iterator, class Bounder>
-  static auto bounding_box(Iterator first, Iterator last, Bounder bounder)
+  template<class BoundingBox>
+  static std::array<float,3> centroid(const BoundingBox& box)
   {
-    using bounding_box_type = std::result_of_t<Bounder(typename std::iterator_traits<Iterator>::reference)>;
+    std::array<float,3> result{(box[1][0] + box[0][0])/2,
+                               (box[1][1] + box[0][1])/2,
+                               (box[1][2] + box[0][2])/2};
+    return result;
+  }
 
-    bounding_box_type result = empty_box<bounding_box_type>();
-        
-    for(; first != last; ++first)
+
+  template<class BoundingBox>
+  static BoundingBox empty_box()
+  {
+    float inf = std::numeric_limits<float>::infinity();
+    BoundingBox result{{{inf, inf, inf}, {-inf, -inf, -inf}}};
+    return result;
+  }
+
+
+  template<class BoundingBox>
+  static BoundingBox combine_bounding_boxes(const BoundingBox& a, const BoundingBox& b)
+  {
+    BoundingBox result = a;
+  
+    for(int i = 0; i < 3; ++i)
     {
-      auto bounding_box = bounder(*first);
-
-      for(int i = 0; i < 3; ++i)
-      {
-        result[0][i] = std::min(result[0][i], bounding_box[0][i]);
-        result[1][i] = std::max(result[1][i], bounding_box[1][i]);
-      }
+      result[0][i] = std::min(result[0][i], b[0][i]);
+      result[1][i] = std::max(result[1][i], b[1][i]);
     }
+  
+    return result;
+  }
 
+
+  template<class BoundingBox, class Point>
+  static BoundingBox add_point_to_bounding_box(const BoundingBox& b, const Point& p)
+  {
+    BoundingBox result = b;
+  
+    for(int i = 0; i < 3; ++i)
+    {
+      result[0][i] = std::min(result[0][i], p[i]);
+      result[1][i] = std::max(result[1][i], p[i]);
+    }
+  
     return result;
   }
 
@@ -253,7 +234,7 @@ struct minimize_surface_area_heuristic
     if(buckets.begin() == valid_buckets_end)
     {
       // we weren't able to partition the elements into exactly two subsets, so use a different partitioning strategy
-      return partition_largest_axis_at_median_element()(first, last, box, bounder);
+      return partition_largest_axis_at_middle_element()(first, last, box, bounder);
     }
 
     // select the bucket with minimal splitting cost
