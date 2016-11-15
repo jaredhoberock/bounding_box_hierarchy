@@ -1,6 +1,4 @@
 # bounding_box_hierarchy
-A generic data structure for finding intersections between rays and geometric objects
-
 Spatial data structures such as *bounding box hierarchies* accelerate ray
 intersection queries by disqualifying entire collections of objects from
 consideration in bulk. If a ray does not intersect the *bounding box* of a
