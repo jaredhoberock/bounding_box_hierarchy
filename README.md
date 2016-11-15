@@ -64,3 +64,5 @@ bounding_box_hierarchy<fancy_triangle> bbh(triangles);
 
 ```
 
+TODO: explain how `.intersect()` works here
+
