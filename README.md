@@ -27,9 +27,9 @@ takes a reference to a `triangle` as a parameter and returns its bounding box:
 
 ```
 using point = std::array<float,3>;
-using bounding_box = std::array<point,2>;
+using bounding_box_type = std::array<point,2>;
 
-bounding_box bounder(const triangle& tri)
+bounding_box_type bounder(const triangle& tri)
 {
   ...
 }
