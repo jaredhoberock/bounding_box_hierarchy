@@ -197,21 +197,23 @@ bool test(const std::vector<triangle>& triangles, const std::vector<ray>& rays)
 template<class Hierarchy>
 double measure_performance(const Hierarchy& hierarchy, const std::vector<ray>& rays)
 {
+  std::vector<float> results(rays.size());
+
   // warm up
-  for(const auto& r : rays)
+  for(size_t i = 0; i < rays.size(); ++i)
   {
-    hierarchy.intersect(r.first, r.second, 1.f);
+    results[i] = hierarchy.intersect(rays[i].first, rays[i].second, 1.f);
   }
 
   size_t milliseconds = time_invocation_in_milliseconds(20, [&]
   {
-    for(const auto& r : rays)
+    for(size_t i = 0; i < rays.size(); ++i)
     {
-      hierarchy.intersect(r.first, r.second, 1.f);
+      results[i] = hierarchy.intersect(rays[i].first, rays[i].second, 1.f);
     }
   });
 
-  return double(1000 * rays.size()) / milliseconds;
+  return 1000 * double(rays.size()) / milliseconds;
 }
 
 
