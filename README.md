@@ -119,6 +119,7 @@ else
 {
   std::cout << "no intersection" << std::endl;
 }
+```
 
 ### Custom Intersection Results
 
