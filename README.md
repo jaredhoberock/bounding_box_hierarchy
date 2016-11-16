@@ -135,17 +135,19 @@ using intersection = std::pair<float, const triangle*>;
 // only consider intersections in the parametric ray interval [0,1), and initialize the nearest triangle to null
 intersection init(1.f, nullptr);
 
-intersection result = bbh.intersect(ray_origin, ray_direction, init, [](const triangle& tri, point o, vector d, const intersection_type& nearest_result)
-{
-  // compute the time at which the ray defined by o & d hits tri
-  float t = ...
-
-  // get the hit time of the nearest result encountered so far
-  float nearest_t = nearest_result.first;
-
-  // return the nearer of the two results
-  return t < nearest_t ? nearest_result : intersection(t, &tri);
-});
+intersection result = bbh.intersect(ray_origin, ray_direction, init,
+  [](const triangle& tri, point o, vector d, const intersection_type& nearest_result)
+  {
+    // compute the time at which the ray defined by o & d hits tri
+    float t = ...
+  
+    // get the hit time of the nearest result encountered so far
+    float nearest_t = nearest_result.first;
+  
+    // return the nearer of the two results
+    return t < nearest_t ? nearest_result : intersection(t, &tri);
+  }
+);
 
 if(result.second)
 {
@@ -178,22 +180,24 @@ struct fancy_intersection
 // only consider intersections in the parametric ray interval [0,1), and initialize the nearest triangle to null
 fancy_intersection fancy_init(1.f, nullptr, other data...)
 
-fancy_intersection result = bbh.intersect(ray_origin, ray_direction, fancy_init, [](const triangle& tri, point o, vector d, const fancy_intersection& nearest_result)
-{
-  // compute the time at which the ray defined by o & d hits tri
-  float t = ...
-
-  // get the hit time of the nearest result encountered so far
-  float nearest_t = nearest_result.hit_time;
-
-  // return the nearer of the two results
-  return t < nearest_t ? nearest_result : fancy_intersection(t, &tri, other data...);
-},
-[](const fancy_intersection& i)
-{
-  // the hit_time() function simply returns the .hit_time member of i
-  return t.hit_time;
-});
+fancy_intersection result = bbh.intersect(ray_origin, ray_direction, fancy_init,
+  [](const triangle& tri, point o, vector d, const fancy_intersection& nearest_result)
+  {
+    // compute the time at which the ray defined by o & d hits tri
+    float t = ...
+  
+    // get the hit time of the nearest result encountered so far
+    float nearest_t = nearest_result.hit_time;
+  
+    // return the nearer of the two results
+    return t < nearest_t ? nearest_result : fancy_intersection(t, &tri, other data...);
+  },
+  [](const fancy_intersection& i)
+  {
+    // the hit_time() function simply returns the .hit_time member of i
+    return t.hit_time;
+  }
+);
 
 if(result.hit_triangle)
 {
