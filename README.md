@@ -59,7 +59,7 @@ struct fancy_triangle
     ...
   }
 
-  // other data here
+  // other data might go here
   ...
 };
 
@@ -173,7 +173,7 @@ struct fancy_intersection
   float hit_time;
   const triangle* hit_triangle;
 
-  // other info might go here
+  // other data might go here
   ...
 };
 
@@ -225,7 +225,7 @@ struct fancier_triangle
     float time;
     const triangle* tri;
 
-    // info might go here
+    // other data might go here
     ...
   };
 
@@ -249,7 +249,7 @@ struct fancier_triangle
     ...
   }
 
-  // other data here
+  // other data might go here
   ...
 };
 
