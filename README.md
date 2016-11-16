@@ -58,6 +58,9 @@ struct fancy_triangle
   {
     ...
   }
+
+  // other data here
+  ...
 };
 
 std::vector<fancy_triangle> triangles;
@@ -241,6 +244,9 @@ struct fancier_triangle
   {
     ...
   }
+
+  // other data here
+  ...
 };
 
 std::vector<fancier_triangle> triangles;
