@@ -161,6 +161,7 @@ or `T2` is a `float` (but not both).
 
 For other types of intersection results, we can use a custom `hit_time` function, which is passed as a parameter following the `intersector`:
 
+```
 // define a fancy intersection result type
 struct fancy_intersection
 {
