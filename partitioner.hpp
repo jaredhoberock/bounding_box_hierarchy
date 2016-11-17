@@ -95,10 +95,10 @@ struct minimize_surface_area_heuristic
   }
 
 
-  template<class BoundingBox>
-  static BoundingBox combine_bounding_boxes(const BoundingBox& a, const BoundingBox& b)
+  template<class BoundingBox1, class BoundingBox2>
+  static BoundingBox1 combine_bounding_boxes(const BoundingBox1& a, const BoundingBox2& b)
   {
-    BoundingBox result = a;
+    BoundingBox1 result = a;
   
     for(int i = 0; i < 3; ++i)
     {
