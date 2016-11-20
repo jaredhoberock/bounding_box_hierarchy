@@ -7,6 +7,7 @@
 #include <functional>
 #include <algorithm>
 #include <tuple>
+#include <cmath>
 
 #include "memoized_bounder.hpp"
 #include "partitioner.hpp"
